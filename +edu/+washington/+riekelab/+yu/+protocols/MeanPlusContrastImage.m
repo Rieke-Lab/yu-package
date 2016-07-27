@@ -30,6 +30,7 @@ classdef MeanPlusContrastImage < edu.washington.riekelab.protocols.RiekeLabStage
         patchSamplingType = symphonyui.core.PropertyType('char', 'row', {'random','ranked'})
         patchContrastType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
         linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
+        % WHAT IS CENTEROFFTYPE
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         
         wholeImageMatrix
@@ -77,11 +78,11 @@ classdef MeanPlusContrastImage < edu.washington.riekelab.protocols.RiekeLabStage
             img = double(img);
             img = (img./max(img(:))); %rescale s.t. brightest point is maximum monitor level
             obj.backgroundIntensity = mean(img(:));%set the mean to the mean over the image
-            contrastImage = (img - obj.backgroundIntensity) ./ obj.backgroundIntensity;
+            contrastImage = (img - obj.backgroundIntensity) ./ obj.backgroundIntensity;% IMAGE WITH CORRECTED BACKGROUND
+            
             img = img.*255; %rescale s.t. brightest point is maximum monitor level
             obj.wholeImageMatrix = uint8(img);
             rng(obj.seed); %set random seed for fixation draw
-            
             %size of the stimulus on the prep:
             stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
                 obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
