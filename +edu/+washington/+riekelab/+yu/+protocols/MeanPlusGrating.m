@@ -95,7 +95,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             %convert from microns to pixels...
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
-            maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
+            %maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             currentBarWidthPix = obj.rig.getDevice('Stage').um2pix(obj.currentBarWidth);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
