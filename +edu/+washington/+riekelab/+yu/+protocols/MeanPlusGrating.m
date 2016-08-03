@@ -12,14 +12,14 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         preTime = 200 % ms
         stimTime = 200 % ms
         tailTime = 200 % ms
-        contrast = 0.9 % relative to mean (0-1)
+        meanIntensity = 0.6 % (0-1)
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
-        barWidth = [5 10 20 40 80 160] % um
+        barWidth = 20; % um
         rotation = 0; % deg
         backgroundIntensity = 0.5 % (0-1)
         centerOffset = [0, 0] % [x,y] (um)
-        randomizeOrder = false;
+       
         onlineAnalysis = 'none'
         numberOfAverages = uint16(20) % number of epochs to queue
         amp
@@ -27,8 +27,12 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
     properties (Hidden)
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        barWidthSequence
         currentBarWidth
+        linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
+        centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
+        
+        % saved to each epoch
+        stimulusTag
     end
        
     properties (Hidden, Transient)
@@ -44,93 +48,85 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         
         function prepareRun(obj)
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
-             if length(obj.barWidth) > 1
-                 % What is pmkmp?
-                colors = edu.washington.riekelab.yu.utils.pmkmp(length(obj.barWidth),'CubicYF');
-            else
-                colors = [0 0 0];
-             end
-             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
-                'groupBy',{'currentBarWidth'},...
-                'sweepColor',colors);
+                'groupBy',{'stimulusTag'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             if ~strcmp(obj.onlineAnalysis,'none')
-                % custom figure handler
-                if isempty(obj.analysisFigure) || ~isvalid(obj.analysisFigure)
-                    obj.analysisFigure = obj.showFigure('symphonyui.builtin.figures.CustomFigure', @obj.CRGanalysis);
-                    f = obj.analysisFigure.getFigureHandle();
-                    set(f, 'Name', 'CRGs');
-                    obj.analysisFigure.userData.trialCounts = zeros(size(obj.barWidth));
-                    obj.analysisFigure.userData.F1 = zeros(size(obj.barWidth));
-                    obj.analysisFigure.userData.F2 = zeros(size(obj.barWidth));
-                    obj.analysisFigure.userData.axesHandle = axes('Parent', f);
-                else
-                    obj.analysisFigure.userData.trialCounts = zeros(size(obj.barWidth));
-                    obj.analysisFigure.userData.F1 = zeros(size(obj.barWidth));
-                    obj.analysisFigure.userData.F2 = zeros(size(obj.barWidth));
-                end
-                
+                obj.showFigure('edu.washington.riekelab.turner.figures.MeanPlusContrastImageFigure',...
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
             % Create bar width sequence.
             obj.barWidthSequence = obj.barWidth;
+            %size of the stimulus on the prep:
+            stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
+                obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
+            stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
+            radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
+            radY = round(stimSize_VHpix(2) / 2);
+             %get equivalent intensity values:
+            %   Get the model RF...
+            sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
+            RF = fspecial('gaussian',2.*[radX radY] + 1,sigmaC);
+
+            %   get the aperture to apply to the image...
+            %   set to 1 = values to be included (i.e. image is shown there)
+            [rr, cc] = meshgrid(1:(2*radX+1),1:(2*radY+1));
+            if obj.apertureDiameter > 0
+                apertureMatrix = sqrt((rr-radX).^2 + ...
+                    (cc-radY).^2) < (obj.apertureDiameter/2) ./ 3.3;
+                apertureMatrix = apertureMatrix';
+            else
+                apertureMatrix = ones(2.*[radX radY] + 1);
+            end
+            
         end
         
-         function CRGanalysis(obj, ~, epoch) %online analysis function
-            response = epoch.getResponse(obj.rig.getDevice(obj.amp));
-            epochResponseTrace = response.getData();
-            sampleRate = response.sampleRate.quantityInBaseUnits;
-            
-            axesHandle = obj.analysisFigure.userData.axesHandle;
-            trialCounts = obj.analysisFigure.userData.trialCounts;
-            F1 = obj.analysisFigure.userData.F1;
-            F2 = obj.analysisFigure.userData.F2;
-            
-            if strcmp(obj.onlineAnalysis,'extracellular') %spike recording
-                %take (prePts+1:prePts+stimPts)
-                epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
-                %count spikes
-                S = edu.washington.riekelab.yu.utils.spikeDetectorOnline(epochResponseTrace);
-                epochResponseTrace = zeros(size(epochResponseTrace));
-                epochResponseTrace(S.sp) = 1; %spike binary
-                
-            else %intracellular - Vclamp
-                epochResponseTrace = epochResponseTrace-mean(epochResponseTrace(1:sampleRate*obj.preTime/1000)); %baseline
-                %take (prePts+1:prePts+stimPts)
-                epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
+         function prepareEpoch(obj, epoch)
+            prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
+
+            %pull patch location and equivalent contrast:
+            obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/3,obj.noPatches) + 1);
+            stimInd = mod(obj.numEpochsCompleted,3);
+            if stimInd == 0 % show linear equivalent intensity
+                obj.stimulusTag = 'intensity';
+            elseif stimInd == 1 %  show remaining spatial contrast (image - intensity)
+                obj.stimulusTag = 'contrast';
+            elseif stimInd == 2 %  show image
+                obj.stimulusTag = 'image';
             end
-
-            L = length(epochResponseTrace); %length of signal, datapoints
-            X = abs(fft(epochResponseTrace));
-            X = X(1:L/2);
-            f = sampleRate*(0:L/2-1)/L; %freq - hz
-            [~, F1ind] = min(abs(f-obj.temporalFrequency)); %find index of F1 and F2 frequencies
-            [~, F2ind] = min(abs(f-2*obj.temporalFrequency));
-
-            F1power = 2*X(F1ind); %pA^2/Hz for current rec, (spikes/sec)^2/Hz for spike rate
-            F2power = 2*X(F2ind); %double b/c of symmetry about zero
             
-            barInd = find(obj.currentBarWidth == obj.barWidth);
-            trialCounts(barInd) = trialCounts(barInd) + 1;
-            F1(barInd) = F1(barInd) + F1power;
-            F2(barInd) = F2(barInd) + F2power;
+            obj.equivalentIntensity = obj.allEquivalentIntensityValues(obj.imagePatchIndex);
             
-            cla(axesHandle);
-            h1 = line(obj.barWidth, F1./trialCounts, 'Parent', axesHandle);
-            set(h1,'Color','g','LineWidth',2,'Marker','o');
-            h2 = line(obj.barWidth, F2./trialCounts, 'Parent', axesHandle);
-            set(h2,'Color','r','LineWidth',2,'Marker','o');
-            hl = legend(axesHandle,{'F1','F2'});
-            xlabel(axesHandle,'Bar width (um)')
-            ylabel(axesHandle,'Amplitude')
+            device = obj.rig.getDevice(obj.amp);
+            duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
+            epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
+            epoch.addResponse(device);
+            
+            %imagePatchMatrix is in VH pixels
+            %size of the stimulus on the prep:
+            stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
+                obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
+            stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
+            radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
+            radY = round(stimSize_VHpix(2) / 2);
+            obj.imagePatchMatrix = obj.wholeImageMatrix(round(obj.currentPatchLocation(1)-radX):round(obj.currentPatchLocation(1)+radX),...
+                round(obj.currentPatchLocation(2)-radY):round(obj.currentPatchLocation(2)+radY));
+            obj.imagePatchMatrix = obj.imagePatchMatrix';
+            
+%             figure(30); clf;
+%             imagesc(obj.imagePatchMatrix); colormap(gray); axis image; axis equal;
 
-            obj.analysisFigure.userData.trialCounts = trialCounts;
-            obj.analysisFigure.userData.F1 = F1;
-            obj.analysisFigure.userData.F2 = F2;
-         end
+            epoch.addParameter('currentStimSet', obj.currentStimSet);
+            epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
+            epoch.addParameter('imagePatchIndex', obj.imagePatchIndex);
+            epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
+            epoch.addParameter('equivalentIntensity', obj.equivalentIntensity);
+            epoch.addParameter('stimulusTag', obj.stimulusTag);
+        end
          
         function p = createPresentation(obj)
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
