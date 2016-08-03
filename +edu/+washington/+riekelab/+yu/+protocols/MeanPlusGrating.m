@@ -59,13 +59,16 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             end
          
             %size of the stimulus on the prep:
-            stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
+            %{
+                stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
                 obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
             stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
             rad = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             
             % Create bar width sequence.
-            obj.barWidthSequence = linspace(obj.minbarWidth, rad,obj.numBarwidth);
+            obj.barWidthSequence = linspace(obj.minbarWidth,rad,obj.numBarwidth);
+            %}
+            obj.barWidthSequence = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
         end
         
          function prepareEpoch(obj, epoch)
