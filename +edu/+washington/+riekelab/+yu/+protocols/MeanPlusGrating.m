@@ -17,11 +17,12 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         rfSigmaCenter = 50 % (um) Enter from fit RF
         minbarWidth = 20; % minimum bar width um
         rotation = 0; % deg
-        backgroundIntensity = 0.5 % (0-1)
+        backgroundIntensity = 0.3 % (0-1)
         centerOffset = [0, 0] % [x,y] (um)
         numBarwidth = 5; % the number of bar width 
         onlineAnalysis = 'none'
         numberOfAverages = uint16(20) % number of epochs to queue
+        maskDiameter = 0; % place holder
         amp
     end
     properties (Hidden)
@@ -30,7 +31,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         currentBarWidth
         linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
-        
+        barWidthSequence
         % saved to each epoch
         stimulusTag
     end
@@ -69,9 +70,6 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         
          function prepareEpoch(obj, epoch)
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
-
-            %pull patch location and equivalent contrast:
-            obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/3,obj.noPatches) + 1);
             stimInd = mod(obj.numEpochsCompleted,3);
             if stimInd == 0 % show linear equivalent intensity
                 obj.stimulusTag = 'intensity';
@@ -123,10 +121,10 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             grate.phase = phaseShift; %keep contrast reversing boundary in center
             
             % equivalent mean image
-            scene = stage.builtin.stimui.Rectangle();
-            scene.size = cavasSize;
+            scene = stage.builtin.stimuli.Rectangle();
+            scene.size = canvasSize;
             scene.color = obj.meanIntensity;
-            scene.position = cavasSize/2+centerOffsetPix;
+            scene.position = canvasSize/2+centerOffsetPix;
             %make it contrast-reversing 
             %{
             grateContrast = stage.builtin.controllers.PropertyController(grate, 'contrast',...
@@ -144,7 +142,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             p.addController(grateVisible);
             
             if strcmp(obj.stimulusTag,'image')
-                p.addStimlus(scene);
+                p.addStimulus(scene);
                 p.addStimulus(grate);
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
@@ -153,7 +151,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(grateVisible);
             elseif strcmp(obj.stimulusTag,'intensity')
-                p.addStimlus(scene);
+                p.addStimulus(scene);
                  sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
@@ -174,14 +172,6 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
                 p.addStimulus(aperture); %add aperture
             end
             
-            if (obj.maskDiameter > 0) % Create mask
-                mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
-                mask.color = obj.backgroundIntensity;
-                mask.radiusX = maskDiameterPix/2;
-                mask.radiusY = maskDiameterPix/2;
-                p.addStimulus(mask); %add mask
-            end
             
         end
         
