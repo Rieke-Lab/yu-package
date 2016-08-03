@@ -151,17 +151,9 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
                 p.addController(sceneVisible);
                 grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-                p.addController(grateVisible);
-            elseif strcmp(obj.stimulusTag,'intensity')
-                p.addStimlus(scene);
-                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
-                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
+            elseif strcmp(obj.stimulusTag,'intensity')
             elseif strcmp(obj.stimulusTag,'contrast')
-                 p.addStimulus(grate);
-                 grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
-                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-                p.addController(grateVisible);
             end
             
             if  (obj.apertureDiameter > 0) % Create aperture
