@@ -58,18 +58,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
          
-            %size of the stimulus on the prep:
-            %{
-                stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
-                obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
-            stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
-            rad = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
-            
-            % Create bar width sequence.
-            obj.barWidthSequence = linspace(obj.minbarWidth,rad,obj.numBarwidth);
-            %}
             obj.barWidthSequence = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
-            backgroundGratingPatch = 
         end
         
          function prepareEpoch(obj, epoch)
@@ -104,69 +93,27 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
-            
-            % Create grating stimulus.
-            grate = edu.washington.riekelab.yu.stimuli.Grating_ZY('square'); %square wave grating
-            grate.orientation = obj.rotation;
-            grate.contrast = 1; % set as the maximum contrast allowed
-            grate.size = [apertureDiameterPix, apertureDiameterPix];
-            grate.position = canvasSize/2 + centerOffsetPix;
-            grate.spatialFreq = 1/(2*currentBarWidthPix); %convert from bar width to spatial freq
-            grate.color = 2*edu.washington.riekelab.yu.utils.setGrateColor(obj.backgroundIntensity,obj.meanIntensity);
-            display(grate.color);
-            %grate2offset = obj.meanIntensity - obj.backgroundIntensity;
-            grate.color = 0;
-            grate2offset = 1;
-            %calc to apply phase shift s.t. a contrast-reversing boundary
-            %is in the center regardless of spatial frequency. Arbitrarily
-            %say boundary should be positve to right and negative to left
-            %crosses x axis from neg to pos every period from 0
-            zeroCrossings = 0:(grate.spatialFreq^-1):grate.size(1); 
-            offsets = zeroCrossings-grate.size(1)/2; %difference between each zero crossing and center of texture, pixels
-            [shiftPix, ~] = min(offsets(offsets>0)); %positive shift in pixels
-            phaseShift_rad = (shiftPix/(grate.spatialFreq^-1))*(2*pi); %phaseshift in radians
-            phaseShift = 360*(phaseShift_rad)/(2*pi); %phaseshift in degrees
-            grate.phase = phaseShift; %keep contrast reversing boundary in center
-            
-            % equivalent mean image
-            scene = stage.builtin.stimuli.Rectangle();
-            scene.size = [apertureDiameterPix apertureDiameterPix];
-            scene.color = obj.meanIntensity;
-            scene.position = canvasSize/2+centerOffsetPix;
-            %make it contrast-reversing 
-            %{
-            grateContrast = stage.builtin.controllers.PropertyController(grate, 'contrast',...
-                  %  @(state)getGrateContrast(obj, state.time - obj.preTime/1e3));
-            %p.addController(grateContrast); %add the controller
-            
-            function c = getGrateContrast(obj, time)
-                c = obj.contrast.*sin(2 * pi * obj.temporalFrequency * time);
-            end
-            %}
-              
-            % hide during pre & post
-            grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
-                @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-            p.addController(grateVisible);
+       
+            grate_height = edu.washington.riekelab.yu.utils.setGrateColor(obj.backgroundIntensity,obj.meanIntensity); 
+            grateMatrix = edu.washington.riekelab.yu.utils.createGratings(obj.meanIntensity, grate_height,currentBarWidthPix,apertureDiameterPix);
+            grateMatrix_image = uint8(grateMatrix.*255);
+            grateMatrix_raw = uint8((grateMatrix - obj.meanIntensity+obj.backgroundIntensity).*255);
             
             if strcmp(obj.stimulusTag,'image')
-                grate.offset = grate2offset;
-                p.addStimulus(grate);
-                grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
-                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-                p.addController(grateVisible);
+                scene = stage.builtin.stimuli.Image(grateMatrix_image);
             elseif strcmp(obj.stimulusTag,'intensity')
-                p.addStimulus(scene);
-                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
-                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-                p.addController(sceneVisible);
+                 scene = stage.builtin.stimuli.Rectangle();
+                 scene.color = obj.meanIntensity;
             elseif strcmp(obj.stimulusTag,'contrast')
-                grate.offset = 0; 
-                p.addStimulus(grate);
-                 grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
-                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-                p.addController(grateVisible);
+                scene = stage.builtin.stimuli.Image(grateMatrix_raw);
             end
+            
+            scene.size = [apertureDiameterPix apertureDiameterPix];; %scale up to canvas size
+            scene.position = canvasSize/2 + centerOffsetPix;
+            p.addStimulus(scene);
+            sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+            p.addController(sceneVisible);
             
             if  (obj.apertureDiameter > 0) % Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
