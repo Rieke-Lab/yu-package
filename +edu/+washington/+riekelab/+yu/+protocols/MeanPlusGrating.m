@@ -105,7 +105,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
             
             % Create grating stimulus.
-            grate = stage.builtin.stimuli.Grating('square'); %square wave grating
+            grate = edu.washington.riekelab.yu.stimuli.Grating('square'); %square wave grating
             grate.orientation = obj.rotation;
             grate.contrast = 1; % set as the maximum contrast allowed
             grate.size = [apertureDiameterPix, apertureDiameterPix];
@@ -125,7 +125,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             
             % equivalent mean image
             scene = stage.builtin.stimuli.Rectangle();
-            scene.size = canvasSize;
+            scene.size = [apertureDiameterPix apertureDiameterPix];
             scene.color = obj.meanIntensity;
             scene.position = canvasSize/2+centerOffsetPix;
             %make it contrast-reversing 
@@ -145,8 +145,9 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             p.addController(grateVisible);
             
             if strcmp(obj.stimulusTag,'image')
-                p.addStimulus(scene);
                 p.addStimulus(grate);
+                p.addStimulus(scene);
+                %p.addStimulus(grate);
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
