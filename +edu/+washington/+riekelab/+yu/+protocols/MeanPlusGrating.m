@@ -105,13 +105,17 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
             
             % Create grating stimulus.
-            grate = edu.washington.riekelab.yu.stimuli.Grating('square'); %square wave grating
+            grate = edu.washington.riekelab.yu.stimuli.Grating_ZY('square'); %square wave grating
             grate.orientation = obj.rotation;
             grate.contrast = 1; % set as the maximum contrast allowed
             grate.size = [apertureDiameterPix, apertureDiameterPix];
             grate.position = canvasSize/2 + centerOffsetPix;
             grate.spatialFreq = 1/(2*currentBarWidthPix); %convert from bar width to spatial freq
             grate.color = 2*edu.washington.riekelab.yu.utils.setGrateColor(obj.backgroundIntensity,obj.meanIntensity);
+            display(grate.color);
+            %grate2offset = obj.meanIntensity - obj.backgroundIntensity;
+            grate.color = 0;
+            grate2offset = 1;
             %calc to apply phase shift s.t. a contrast-reversing boundary
             %is in the center regardless of spatial frequency. Arbitrarily
             %say boundary should be positve to right and negative to left
@@ -145,12 +149,8 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             p.addController(grateVisible);
             
             if strcmp(obj.stimulusTag,'image')
+                grate.offset = grate2offset;
                 p.addStimulus(grate);
-                p.addStimulus(scene);
-                %p.addStimulus(grate);
-                sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
-                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
-                p.addController(sceneVisible);
                 grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(grateVisible);
@@ -160,7 +160,8 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
             elseif strcmp(obj.stimulusTag,'contrast')
-                 p.addStimulus(grate);
+                grate.offset = 0; 
+                p.addStimulus(grate);
                  grateVisible = stage.builtin.controllers.PropertyController(grate, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(grateVisible);
