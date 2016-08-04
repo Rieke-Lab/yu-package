@@ -69,6 +69,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             obj.barWidthSequence = linspace(obj.minbarWidth,rad,obj.numBarwidth);
             %}
             obj.barWidthSequence = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
+            backgroundGratingPatch = 
         end
         
          function prepareEpoch(obj, epoch)
