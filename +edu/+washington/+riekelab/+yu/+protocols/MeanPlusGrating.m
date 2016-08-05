@@ -12,7 +12,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         preTime = 200 % ms
         stimTime = 200 % ms
         tailTime = 200 % ms
-        meanIntensity = 0.6 % (0-1)
+        meanIntensity = 0.6 % (0-1), uniform
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
         minbarWidth = 20; % minimum bar width um
@@ -21,7 +21,8 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         centerOffset = [0, 0] % [x,y] (um)
         numBarwidth = 5; % the number of bar width 
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(20) % number of epochs to queue
+        numberOfAverages = uint16(40) % number of epochs to queue
+        linearIntegrationFunction = 'gaussian center' % small error due to pixel int
         maskDiameter = 0; % place holder
         amp
     end
@@ -34,6 +35,8 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         barWidthSequence
         % saved to each epoch
         stimulusTag
+        equimean % equivalent intensity
+        int_error = 0.03; % error space due to pixels are int
     end
        
 
@@ -57,13 +60,19 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
-         
-            obj.barWidthSequence = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
+            %obj.barWidthSequence = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
+
+            obj.barWidthSequence = ones(1,2*obj.numBarwidth);
+            % alternating the dark and bright bars
+            obj.barWidthSequence(1:2:2*obj.numBarwidth) = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
+            obj.barWidthSequence(2:2:2*obj.numBarwidth) = -linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
+            
+            display(obj.barWidthSequence);
         end
         
          function prepareEpoch(obj, epoch)
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
-            stimInd = mod(obj.numEpochsCompleted,3);
+            stimInd = mod(obj.numEpochsPrepared - 1,3);
             if stimInd == 0 % show linear equivalent intensity
                 obj.stimulusTag = 'intensity';
             elseif stimInd == 1 %  show remaining spatial contrast (image - intensity)
@@ -71,7 +80,8 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             elseif stimInd == 2 %  show image
                 obj.stimulusTag = 'image';
             end
-            barindex = mod(floor(obj.numEpochsCompleted/3),obj.numBarwidth)+1;
+            barindex = mod(floor((obj.numEpochsPrepared - 1)/3),obj.numBarwidth*2)+1;
+            display(barindex);
             obj.currentBarWidth = obj.barWidthSequence(barindex);
             device = obj.rig.getDevice(obj.amp);
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
@@ -93,22 +103,26 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
-       
-            grate_height = edu.washington.riekelab.yu.utils.setGrateColor(obj.backgroundIntensity,obj.meanIntensity); 
+            
+            grate_height = -obj.int_error+edu.washington.riekelab.yu.utils.setGrateColor(obj.backgroundIntensity,obj.meanIntensity); 
             grateMatrix = edu.washington.riekelab.yu.utils.createGratings(obj.meanIntensity, grate_height,currentBarWidthPix,apertureDiameterPix);
             grateMatrix_image = uint8(grateMatrix.*255);
-            grateMatrix_raw = uint8((grateMatrix - obj.meanIntensity+obj.backgroundIntensity).*255);
             
+            sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
+            %gaussian or uniform
+            obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,grateMatrix,obj.linearIntegrationFunction);
+            grateMatrix_raw = uint8((grateMatrix - obj.equimean+obj.backgroundIntensity).*255);
+         
             if strcmp(obj.stimulusTag,'image')
                 scene = stage.builtin.stimuli.Image(grateMatrix_image);
             elseif strcmp(obj.stimulusTag,'intensity')
-                 scene = stage.builtin.stimuli.Rectangle();
-                 scene.color = obj.meanIntensity;
+                scene = stage.builtin.stimuli.Rectangle();
+                scene.color = obj.equimean;
             elseif strcmp(obj.stimulusTag,'contrast')
                 scene = stage.builtin.stimuli.Image(grateMatrix_raw);
             end
             
-            scene.size = [apertureDiameterPix apertureDiameterPix];; %scale up to canvas size
+            scene.size = [apertureDiameterPix apertureDiameterPix]; %scale up to canvas size
             scene.position = canvasSize/2 + centerOffsetPix;
             p.addStimulus(scene);
             sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
