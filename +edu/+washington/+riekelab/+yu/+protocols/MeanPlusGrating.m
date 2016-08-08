@@ -67,7 +67,6 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             obj.barWidthSequence(1:2:2*obj.numBarwidth) = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
             obj.barWidthSequence(2:2:2*obj.numBarwidth) = -linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
             
-            display(obj.barWidthSequence);
         end
         
          function prepareEpoch(obj, epoch)
@@ -81,7 +80,6 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
                 obj.stimulusTag = 'image';
             end
             barindex = mod(floor((obj.numEpochsPrepared - 1)/3),obj.numBarwidth*2)+1;
-            display(barindex);
             obj.currentBarWidth = obj.barWidthSequence(barindex);
             device = obj.rig.getDevice(obj.amp);
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
