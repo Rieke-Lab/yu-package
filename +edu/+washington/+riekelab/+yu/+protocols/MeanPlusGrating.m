@@ -56,7 +56,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             if ~strcmp(obj.onlineAnalysis,'none')
-                obj.showFigure('edu.washington.riekelab.turner.figures.MeanPlusContrastImageFigure',...
+                obj.showFigure('edu.washington.riekelab.yu.figures.MeanPlusGratingFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
@@ -64,9 +64,8 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
 
             obj.barWidthSequence = ones(1,2*obj.numBarwidth);
             % alternating the dark and bright bars
-            obj.barWidthSequence(1:2:2*obj.numBarwidth) = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
-            obj.barWidthSequence(2:2:2*obj.numBarwidth) = -linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
-            
+            obj.barWidthSequence(1:2:2*obj.numBarwidth) = linspace(obj.minbarWidth,obj.apertureDiameter/2,obj.numBarwidth);
+            obj.barWidthSequence(2:2:2*obj.numBarwidth) = -linspace(obj.minbarWidth,obj.apertureDiameter/2,obj.numBarwidth);
         end
         
          function prepareEpoch(obj, epoch)
