@@ -12,11 +12,11 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
         minbarWidth = 20; % minimum bar width um
+        numBarwidth = 4; % the number of bar width 
         backgroundIntensity = 0.2 % (0-1)
         minAbsContrast = 0.1; % <backgroundIntensity
         contrastLevel = 3;
         centerOffset = [0, 0] % [x,y] (um)
-        numBarwidth = 4; % the number of bar width 
         onlineAnalysis = 'none'
         numberOfAverages = uint16(80) % number of epochs to queue
         linearIntegrationFunction = 'gaussian center' % small error due to pixel int
@@ -35,7 +35,7 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         % saved to each epoch
         stimulusTag
         equimean % equivalent intensity
-        int_error = 0.03; % error space due to pixels are int
+        %int_error = 0.03; % error space due to pixels are int
     end
        
 
@@ -100,6 +100,8 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
             epoch.addParameter('stimulusTag', obj.stimulusTag);
             epoch.addParameter('currentBarWidth', obj.currentBarWidth);
+            epch.addParameter('currentAbsContrast',obj.currentAbsContrast);
+            epoch.addParameter('currentMeanLevel',obj.currentMeanLevel);
         end
          
         function p = createPresentation(obj)
