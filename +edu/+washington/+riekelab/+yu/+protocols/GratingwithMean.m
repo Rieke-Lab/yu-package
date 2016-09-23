@@ -20,6 +20,7 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
         onlineAnalysis = 'none'
         numberOfAverages = uint16(80) % number of epochs to queue
         linearIntegrationFunction = 'gaussian center' % small error due to pixel int
+        amp
     end
     properties (Hidden)
         ampType
@@ -77,8 +78,8 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
                 obj.stimulusTag = 'grating';
             end
             %determine which mean light level to use
-            numLightLevels = size(obj.meanLevelSequence,1);
-            lightLevelIndex = mod(floor((obj.numEpochsPrepared - 1)/2),obj.numLightLevels)+1;
+            numLightLevels = size(obj.meanLevelSequence,2);
+            lightLevelIndex = mod(floor((obj.numEpochsPrepared - 1)/2),numLightLevels)+1;
             obj.currentMeanLevel = obj.meanLevelSequence(lightLevelIndex);
             
             % determine which bar width to use
@@ -86,10 +87,11 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             obj.currentBarWidth = obj.barWidthSequence(barindex);
             
             % determine which contrast level to use
-            contrastindex = mod(floor((obj.numEpochsPrepared - 1)/(2*numLightLevels*obj.numBarWidth*2)),obj.contrastLevel)+1;
-            maxAbsContrast = min(obj.currentMeanLevel, 1-obj.currentmeanLevel);
+            contrastindex = mod(floor((obj.numEpochsPrepared - 1)/(2*numLightLevels*obj.numBarwidth*2)),obj.contrastLevel)+1;
+            maxAbsContrast = min(obj.currentMeanLevel, 1-obj.currentMeanLevel);
             contrastSequence = linspace(obj.minAbsContrast,maxAbsContrast,obj.contrastLevel);
             obj.currentAbsContrast = contrastSequence(contrastindex);
+            display(obj.currentAbsContrast);
             
             device = obj.rig.getDevice(obj.amp);
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
@@ -119,7 +121,7 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             %gaussian or uniform
             obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,grateMatrix,obj.linearIntegrationFunction);
          
-            if strcmp(obj.stimulusTag,'image')
+            if strcmp(obj.stimulusTag,'grating')
                 scene = stage.builtin.stimuli.Image(grateMatrix_image);
             elseif strcmp(obj.stimulusTag,'intensity')
                 scene = stage.builtin.stimuli.Rectangle();
