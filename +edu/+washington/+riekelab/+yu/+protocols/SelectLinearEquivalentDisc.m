@@ -11,7 +11,6 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
         apertureDiameter = 200 % um
         linearIntegrationFunction = 'gaussian center'
         patchSampling = 'Inh'
-        sampleMethod = 'default'
         rfSigmaCenter = 50 % (um) Enter from fit RF
 
         centerOffset = [0, 0] % [x,y] (um)
@@ -24,9 +23,9 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
         ampType
         imageNameType = symphonyui.core.PropertyType('char', 'row', {'00152','01151'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
-        patchSamplingType = symphonyui.core.PropertyType('char', 'row', {'Inh','Exc','Spike'})
+        patchSamplingType = symphonyui.core.PropertyType('char', 'row', {'Inh','Exc','Spikes'})
         %patchContrastType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
-        sampleMethodType = symphonyui.core.PropertyType('char','row',{'default','calculated'})
+        %sampleMethodType = symphonyui.core.PropertyType('char','row',{'default','calculated'})
         linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         
@@ -94,7 +93,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             %LnResp = imageData.(fieldName).LnModelResponse;
             cur_Dir = mfilename('fullpath');
             resource_loc = strcat(cur_Dir(1:strfind(cur_dir,'edu')-2),'resource\');
-            if (strcmp(obj.sampleMethod,'default')) % default, select patches that has been calculated...
+            % default, select patches that has been calculated...
                 % based on other cells to give most different inh,exc, spikes
                 load ([resource_loc,obj.ImageName,'_sorted_locs.mat'])
               if strcmp(obj.patchContrast,'inh')
@@ -105,14 +104,12 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
                   obj.noPatches = min(obj.noPatches,size(exc_loc,1));
                   xLoc = exc_loc(1:obj.noPatches,1);
                   yLoc = exc_loc(1:obj.noPatches,2);
-              elseif strcmp(obj.patchContrast,'spikes')
+              elseif strcmp(obj.patchContrast,'Spikes')
                   obj.noPatches = min(obj.noPatches,size(spike_loc,1));
                   xLoc = spike_loc(1:obj.noPatches,1);
                   yLoc = spike_loc(1:obj.noPatches,2);
               end
-            elseif(strcmp(obj.sampleMethod,'calculated'))
-                % TODO
-            end
+     
             obj.patchLocations(1,1:obj.noPatches) = xLoc';
             obj.patchLocations(2:1:obj.noPatches) = yLoc';
             
