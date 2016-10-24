@@ -96,7 +96,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             resource_loc = strcat(cur_Dir(1:strfind(cur_dir,'edu')-2),'resource\');
             if (strcmp(obj.sampleMethod,'default')) % default, select patches that has been calculated...
                 % based on other cells to give most different inh,exc, spikes
-                load ([resource_loc,'sorted_locs.mat'])
+                load ([resource_loc,obj.ImageName,'_sorted_locs.mat'])
               if strcmp(obj.patchContrast,'inh')
                   obj.noPatches = min(obj.noPatches,size(inh_loc,1));
                   xLoc = inh_loc(1:obj.noPatches,1);
