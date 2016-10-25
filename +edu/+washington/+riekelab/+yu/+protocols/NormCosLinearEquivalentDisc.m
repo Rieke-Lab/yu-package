@@ -1,6 +1,4 @@
 classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    % Sinewave change of the stimulus patches...
-    %   Mode 1: search for patches; Mode 2:use stored locations
     
     properties
         preTime = 200 % ms
@@ -61,6 +59,8 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                 'groupBy',{'stimulusTag'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
+           
+            % specify online analysis methods
             if ~strcmp(obj.onlineAnalysis,'none')
                 obj.showFigure('edu.washington.riekelab.turner.figures.ImageVsIntensityFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
