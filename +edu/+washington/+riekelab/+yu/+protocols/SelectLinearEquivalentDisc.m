@@ -210,7 +210,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
             elseif strcmp(obj.stimulusTag,'intensity')
-                display( obj.equivalentIntensity);
+                %display( obj.equivalentIntensity);
                 scene = stage.builtin.stimuli.Rectangle();
                 scene.size = canvasSize;
                 scene.color = obj.equivalentIntensity;
