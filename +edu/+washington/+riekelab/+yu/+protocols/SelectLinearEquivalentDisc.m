@@ -4,9 +4,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
         preTime = 200 % ms
         stimTime = 200 % ms
         tailTime = 200 % ms
-        
         imageName = '00152' %van hateren image names
-        seed = 1 % rand seed for picking image patches
         noPatches = 5 %number of different image patches (fixations) to show; <10
         apertureDiameter = 200 % um
         linearIntegrationFunction = 'gaussian center'
