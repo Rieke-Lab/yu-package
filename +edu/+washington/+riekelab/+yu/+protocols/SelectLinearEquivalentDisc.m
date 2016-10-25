@@ -75,7 +75,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             contrastImage = (img - obj.backgroundIntensity) ./ obj.backgroundIntensity;
             img = img.*255; %rescale s.t. brightest point is maximum monitor level
             obj.wholeImageMatrix = uint8(img);
-            rng(obj.seed); %set random seed for fixation draw
+            %rng(obj.seed); %set random seed for fixation draw
             
             %size of the stimulus on the prep:
             stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
@@ -90,26 +90,29 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             %1) restrict to desired patch contrast:
             %LnResp = imageData.(fieldName).LnModelResponse;
             cur_Dir = mfilename('fullpath');
-            resource_loc = strcat(cur_Dir(1:strfind(cur_dir,'edu')-2),'resource\');
+            resource_loc = strcat(cur_Dir(1:strfind(cur_Dir,'edu')-2),'resource\');
+            %display(resource_loc);
             % default, select patches that has been calculated...
                 % based on other cells to give most different inh,exc, spikes
-                load ([resource_loc,obj.ImageName,'_sorted_locs.mat'])
-              if strcmp(obj.patchContrast,'inh')
+                %display([resource_loc,obj.imageName,'_sorted_locs.mat']);
+                load ([resource_loc,obj.imageName,'_sorted_locs.mat'])
+             %display('matrix');
+              if strcmp(obj.patchSampling,'Inh')
                   obj.noPatches = min(obj.noPatches,size(inh_loc,1));
-                  xLoc = inh_loc(1:obj.noPatches,1);
-                  yLoc = inh_loc(1:obj.noPatches,2);
-              elseif strcmp(obj.patchContrast,'exc')
+                   obj.patchLocations(1,1:obj.noPatches) = inh_loc(1:obj.noPatches,1)';
+                  obj.patchLocations(2,1:obj.noPatches) = inh_loc(1:obj.noPatches,2)';
+              elseif strcmp(obj.patchSampling,'Exc')
                   obj.noPatches = min(obj.noPatches,size(exc_loc,1));
-                  xLoc = exc_loc(1:obj.noPatches,1);
-                  yLoc = exc_loc(1:obj.noPatches,2);
-              elseif strcmp(obj.patchContrast,'Spikes')
+                   obj.patchLocations(1,1:obj.noPatches) = exc_loc(1:obj.noPatches,1)';
+                   obj.patchLocations(2,1:obj.noPatches) = exc_loc(1:obj.noPatches,2)';
+              elseif strcmp(obj.patchSampling,'Spikes')
                   obj.noPatches = min(obj.noPatches,size(spike_loc,1));
-                  xLoc = spike_loc(1:obj.noPatches,1);
-                  yLoc = spike_loc(1:obj.noPatches,2);
+                obj.patchLocations(1,1:obj.noPatches) = spike_loc(1:obj.noPatches,1)';
+                   obj.patchLocations(2,1:obj.noPatches) = spike_loc(1:obj.noPatches,2)';
               end
      
-            obj.patchLocations(1,1:obj.noPatches) = xLoc';
-            obj.patchLocations(2:1:obj.noPatches) = yLoc';
+           % obj.patchLocations(1,1:obj.noPatches) = xLoc';
+           % obj.patchLocations(2:1:obj.noPatches) = yLoc';
             
             
             %get equivalent intensity values:
@@ -135,6 +138,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
             
             for ff = 1:obj.noPatches
+                %display(size(obj.patchLocations));
                 tempPatch = contrastImage(round(obj.patchLocations(1,ff)-radX):round(obj.patchLocations(1,ff)+radX),...
                     round(obj.patchLocations(2,ff)-radY):round(obj.patchLocations(2,ff)+radY));
                 equivalentContrast = sum(sum(weightingFxn .* tempPatch));
@@ -151,6 +155,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             evenInd = mod(obj.numEpochsCompleted,2);
             if evenInd == 1 %even, show uniform linear equivalent intensity
                 obj.stimulusTag = 'intensity';
+                %display('intensity');
             elseif evenInd == 0 %odd, show image
                 obj.stimulusTag = 'image';
             end
@@ -205,6 +210,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
             elseif strcmp(obj.stimulusTag,'intensity')
+                display( obj.equivalentIntensity);
                 scene = stage.builtin.stimuli.Rectangle();
                 scene.size = canvasSize;
                 scene.color = obj.equivalentIntensity;
