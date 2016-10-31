@@ -100,7 +100,7 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
             epoch.addParameter('stimulusTag', obj.stimulusTag);
             epoch.addParameter('currentBarWidth', obj.currentBarWidth);
-            epch.addParameter('currentAbsContrast',obj.currentAbsContrast);
+            epoch.addParameter('currentAbsContrast',obj.currentAbsContrast);
             epoch.addParameter('currentMeanLevel',obj.currentMeanLevel);
         end
          
