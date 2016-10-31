@@ -1,0 +1,10 @@
+function trunc_img = truncpic( img, b )
+%TRUNCPIC recenter the image, so that the contrast will fall in between
+%[-1,1], centerd at the same mean
+%   Detailed explanation goes here
+  m = mean(img(:));
+  p_min = min((img(:));
+  p_max = max((img(:));
+  trunc_img = (img - p_min)
+end
+
