@@ -1,5 +1,4 @@
-classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-% todo: impletement trunc();    
+classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol   
     properties
         preTime = 200 % ms
         stimTime = 200 % ms
