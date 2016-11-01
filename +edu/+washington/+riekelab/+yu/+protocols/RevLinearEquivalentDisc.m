@@ -1,6 +1,5 @@
 classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     
-    
     properties
         preTime = 250 % ms
         stimTime = 2000 % ms
@@ -28,6 +27,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
          imageMatrix
          equivalentIntensity
     end
+    
     methods
         function didSetRig(obj)
             didSetRig@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
@@ -154,6 +154,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
             end
+        end
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;
         end
