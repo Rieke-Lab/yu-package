@@ -8,8 +8,9 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
         patchLoc = [400,400]; % pixels
         temporalFrequency = 4 % Hz
         apertureDiameter = 200; % um
-        backgroundIntensity = 0.5 % (0-1)
         centerOffset = [0, 0] % [x,y] (um)
+        rfSigmaCenter = 50 % (um) Enter from fit RF
+        linearIntegrationFunction = 'gaussian center'
         onlineAnalysis = 'none'
         numberOfAverages = uint16(20) % number of epochs to queue
         amp
@@ -26,6 +27,9 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
          patchLocType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
          imageMatrix
          equivalentIntensity
+         currentStimSet
+         backgroundIntensity
+         stimulusTag
     end
     
     methods
@@ -83,12 +87,13 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 weightingFxn = apertureMatrix;
             end
             weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
-            obj.imageMatrix = img(round(obj.patchLoc(1)-radX):round(obj.patchLocations(1)+radX),...
-                    round(obj.patchLoc(1)-radY):round(obj.patchLoc(2)+radY));
+            obj.imageMatrix = img(round(obj.patchLoc(1)-radX):round(obj.patchLoc(1)+radX),...
+                    round(obj.patchLoc(2)-radY):round(obj.patchLoc(2)+radY));
             if max(obj.imageMatrix(:))>obj.backgroundIntensity*2
-                obj.imageMatrix = edu.washington.riekelab.yu.utils.truncpic(tempPatch, obj.backgroundIntensity);
+                obj.imageMatrix = edu.washington.riekelab.yu.utils.truncpic(obj.imageMatrix, obj.backgroundIntensity);
             end
             tempPatch = (obj.imageMatrix - obj.backgroundIntensity)/obj.backgroundIntensity;
+            %display(size(obj.imageMatrix));
             equivalentContrast = sum(sum(weightingFxn .* tempPatch));
             obj.equivalentIntensity = obj.backgroundIntensity + ...
                     equivalentContrast * obj.backgroundIntensity;
@@ -104,14 +109,18 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 obj.stimulusTag = 'image';                
             end
             
+            device = obj.rig.getDevice(obj.amp);
+            duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
+            epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
+            epoch.addResponse(device);
             obj.imageMatrix = uint8(obj.imageMatrix.*255);
 %             figure(30); clf;
 %             imagesc(obj.imagePatchMatrix); colormap(gray); axis image; axis equal;
             
             epoch.addParameter('currentStimSet', obj.currentStimSet);
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
-            epoch.addParameter('imagePatchIndex', obj.imagePatchIndex);
-            epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
+           % epoch.addParameter('imagePatchIndex', obj.imagePatchIndex);
+           % epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
             epoch.addParameter('equivalentIntensity', obj.equivalentIntensity);
             epoch.addParameter('stimulusTag', obj.stimulusTag);
         end
@@ -120,10 +129,12 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
             p.setBackgroundColor(obj.backgroundIntensity);
-            
+            background = obj.backgroundIntensity;
+            freq = obj.temporalFrequency;
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
-
+            equiIntensity = obj.equivalentIntensity;
+            tempImageMatrix = obj.imageMatrix;
             if strcmp(obj.stimulusTag,'image')
                 scene = stage.builtin.stimuli.Image(obj.imageMatrix);
                 scene.size = canvasSize; %scale up to canvas size
@@ -131,7 +142,11 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 % Use linear interpolation when scaling the image.
                 scene.setMinFunction(GL.LINEAR);
                 scene.setMagFunction(GL.LINEAR);
+                sceneMatrix = stage.builtin.controllers.PropertyController(scene,'imageMatrix',...
+                    @(state)getSceneMatrix(tempImageMatrix, state.time - obj.preTime/1e3,background,freq));
                 p.addStimulus(scene);
+                p.addController(sceneMatrix);
+                display('scene added');
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
@@ -141,6 +156,10 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 scene.color = obj.equivalentIntensity;
                 scene.position = canvasSize/2 + centerOffsetPix;
                 p.addStimulus(scene);
+                sceneColor = stage.builtin.controllers.PropertyController(scene,'color',...
+                    @(state)getSceneColor(equiIntensity, state.time - obj.preTime/1e3,background,freq));
+                 p.addController(sceneColor);
+                   display('scene added too');
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
@@ -154,7 +173,17 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
             end
+            function p = getSceneMatrix(img, time, b,f)
+                % alternate image intensity
+                        contra = (img-b)/b*cos(time*f*pi*2);
+                        p = contra*b+b;
+            end
+            function p = getSceneColor(intensity,time, b, f)
+                     contra = (intensity-b)/b*cos(time*f*pi*2);
+                     p = contra*b+b;
+            end
         end
+        
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;
         end
