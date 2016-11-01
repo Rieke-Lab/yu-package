@@ -1,9 +1,11 @@
-classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol   
+classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
+    
     properties
         preTime = 200 % ms
         stimTime = 200 % ms
         tailTime = 200 % ms 
         imageName = '00152' %van hateren image names
+        searchMode = 'On'
         startPatches = 30 %number of different image patches (fixations) to show
         noPatches = 3 % selected patch for stimulus
         displayMode = 'full' % alternating prequencies
@@ -12,6 +14,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
         patchContrast = 'all'
         rfSigmaCenter = 50 % (um) Enter from fit RFmfilename('fullpath')mfilename('fullpath')
         centerOffset = [0, 0] % [x,y] (um)
+        patchSampling = 'random'
         onlineAnalysis = 'none'
         numberOfAverages = uint16(180) % number of epochs to queue
         amp % Output amplifier
@@ -22,9 +25,11 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
         imageNameType = symphonyui.core.PropertyType('char', 'row', {'00152','00377','00405','00459','00657','01151','01154',...
             '01192','01769','01829','02265','02281','02733','02999','03093',...
             '03347','03447','03584','03758','03760'})
-        displayModeType = symphonyui.core.displayMode('char','row',{'full','trunc'})
+        searchModeType = symphonyui.core.PropertyType('char','row',{'On','Off'})
+        displayModeType = symphonyui.core.PropertyType('char','row',{'full','trunc'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         patchContrastType = symphonyui.core.PropertyType('char', 'row', {'all','negative','positive'})
+        patchSamplingType = symphonyui.core.PropertyType('char', 'row', {'random','ranked'})
         linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         
@@ -39,7 +44,6 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
         currentPatchIndex % start from 30 patches;shrinking
         %saved out to each epoch...
         descentSeq % binary search pool size
-        patchResponse
         currentStimSet
         backgroundIntensity
         imagePatchIndex
@@ -93,7 +97,6 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
             radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             radY = round(stimSize_VHpix(2) / 2);
             
-            %get patch locations:
             load([resourcesDir,'NaturalImageFlashLibrary_072216.mat']);
             fieldName = ['imk', obj.imageName];
             %1) restrict to desired patch contrast:
@@ -110,20 +113,26 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
             subunitResp = imageData.(fieldName).SubunitModelResponse(inds);
             LnResp = imageData.(fieldName).LnModelResponse(inds);
             
-            % may still need to set up the seed    
-            %pull more than needed to account for empty bins at tail
-            [~, ~, bin] = histcounts(responseDifferences,1.5*obj.noPatches);
-             populatedBins = unique(bin);
-                %pluck one patch from each bin
-             pullInds = arrayfun(@(b) find(b == bin,1),populatedBins);
+            %2) do patch sampling:
+            responseDifferences = subunitResp - LnResp;
+            if strcmp(obj.patchSampling,'random')
                 %get patch indices:
-             pullInds = randsample(pullInds,obj.noPatches);
-                
-            obj.patchLocations(1,1:obj.noPatches) = xLoc(pullInds); %in VH pixels
-            obj.patchLocations(2,1:obj.noPatches) = yLoc(pullInds);
+                pullInds = randsample(1:length(xLoc),obj.startPatches);
+            else strcmp(obj.patchSampling,'ranked')
+                %pull more than needed to account for empty bins at tail
+                [~, ~, bin] = histcounts(responseDifferences,1.5*obj.startPatches);
+                populatedBins = unique(bin);
+                %pluck one patch from each bin
+                pullInds = arrayfun(@(b) find(b == bin,1),populatedBins);
+                %get patch indices:
+                pullInds = randsample(pullInds,obj.startPatches);
+            end
+            obj.patchLocations(1,1:obj.startPatches) = xLoc(pullInds); %in VH pixels
+            obj.patchLocations(2,1:obj.startPatches) = yLoc(pullInds);
             subunitResp = subunitResp(pullInds);
             LnResp = LnResp(pullInds);
             responseDifferences = subunitResp - LnResp;
+            
             obj.currentPatchNo = obj.startPatches; % go through all image patches first
             
 %             figure(30); clf;
@@ -152,7 +161,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                 weightingFxn = apertureMatrix;
             end
             weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
-            
+            %display(size(obj.patchLocations));
             for ff = 1:obj.startPatches
                 tempPatch = obj.wholeImageMatrix(round(obj.patchLocations(1,ff)-radX):round(obj.patchLocations(1,ff)+radX),...
                     round(obj.patchLocations(2,ff)-radY):round(obj.patchLocations(2,ff)+radY));
@@ -165,23 +174,39 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                 obj.allEquivalentIntensityValues(ff) = obj.backgroundIntensity + ...
                     equivalentContrast * obj.backgroundIntensity;
             end
-            obj.searchTag = 'On';
-            obj.currentPatchIndex = ones(obj.startPatches,1); % start from all image patches
-            searchRound = floor(log2(obj.startPatches/obj.noPatches))+1;
-            obj.descentSeq = zeros(searchRound,1);
-            for i = 1:searchRound
+            if strcmp(obj.searchMode,'Off')
+                 obj.searchTag = 'Off';
+                 % readin the index
+                 cur_Dir = mfilename('fullpath');
+                 resource_loc = strcat(cur_Dir(1:strfind(cur_Dir,'edu')-2),'resource\');
+                 load ([resource_loc,obj.imageName,'temp_locs.mat']);
+                 obj.currentPatchIndex = temp_locs;
+            else obj.searchTag = 'On';
+                 obj.currentPatchIndex = 1:obj.startPatches; % start from all image patches
+                 searchRound = ceil(log2(obj.startPatches/obj.noPatches))+1;
+                 obj.descentSeq = [];
+               for i = 1:searchRound
                 % generate a sequence so that we can map the current epoch
                 % number into the search process
-                obj.descentSeq(i) = sum(obj.descentSeq)+floor(obj.startPatches/(2^(i-1)));
-            end
+                  if i == 1
+                     obj.descentSeq(i) = floor(obj.startPatches/(2^(i-1)));
+                  else
+                    if (floor(obj.startPatches/2^(i-1))>=obj.noPatches)
+                     obj.descentSeq(i) = obj.descentSeq(i-1)+floor(obj.startPatches/(2^(i-1)));
+                    else break;
+                    end
+                  end
+               end
             obj.patchResponse = zeros(obj.startPatches,2); % store temporal mean results
+            display(obj.descentSeq);
+            end
         end
         
          function prepareEpoch(obj, epoch)
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
             
             evenInd = mod(obj.numEpochsCompleted,2);
-            epochInd = floor(obj.numEpochCompleted/2)+1; 
+            epochInd = floor(obj.numEpochsCompleted/2)+1; 
             if evenInd == 1 %even, show uniform linear equivalent intensity
                 obj.stimulusTag = 'intensity';
             elseif evenInd == 0 %odd, show image
@@ -191,19 +216,24 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
             if (strcmpi(obj.searchTag,'On'))
                 % search state 
                 roundInd = find(obj.descentSeq >=epochInd,1); 
-                if roundIndex == 1
+                if roundInd == 1
                     obj.imagePatchIndex = epochInd;
                 else
                     obj.imagePatchIndex = epochInd - obj.descentSeq(roundInd-1); 
                 end
+           
+            elseif strcmpi(obj.searchMode,'Off')
+                 obj.imagePatchIndex = mod(epochInd,length(obj.currentPatchIndex))+1;
             elseif (strcmpi(obj.searchTag, 'Off'))
                 % prepre for rendering the targeted group of responses
-                 obj.imagePatchIndex = mod(epochInd - sum(obj.descentSeq),obj.noPatches);
+                 obj.imagePatchIndex = mod(epochInd - obj.descentSeq(end),obj.noPatches)+1;
             end
             %map to the current poll of image patches
+            %display(size(obj.currentPatchIndex));
             obj.imagePatchIndex = obj.currentPatchIndex(obj.imagePatchIndex);
             
-            
+            %display('obj.imagePatchIndex:');
+            %display(obj.imagePatchIndex);
             obj.currentPatchLocation(1) = obj.patchLocations(1,obj.imagePatchIndex); %in VH pixels
             obj.currentPatchLocation(2) = obj.patchLocations(2,obj.imagePatchIndex);
             obj.equivalentIntensity = obj.allEquivalentIntensityValues(obj.imagePatchIndex);
@@ -223,7 +253,9 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
             obj.imagePatchMatrix = obj.wholeImageMatrix(round(obj.currentPatchLocation(1)-radX):round(obj.currentPatchLocation(1)+radX),...
                 round(obj.currentPatchLocation(2)-radY):round(obj.currentPatchLocation(2)+radY));
             obj.imagePatchMatrix = obj.imagePatchMatrix';
-            obj.imagePatchMatrix = edu.washington.riekelab.yu.utils.truncpic(obj.imagePatchMatrix,obj.backgroundIntensity);
+            if strcmp(obj.displayMode,'trunc')
+             obj.imagePatchMatrix = edu.washington.riekelab.yu.utils.truncpic(obj.imagePatchMatrix,obj.backgroundIntensity);
+            end
             obj.imagePatchMatrix = obj.imagePatchMatrix.*255;
             obj.imagePatchMatrix = uint8(obj.imagePatchMatrix);
 %             figure(30); clf;
@@ -283,11 +315,13 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
             % and generate the next  currentPatchIndex if necessary
             % determine if the search Tag is still on
             completeEpoch@symphonyui.core.Protocol(obj,epoch);
-            
-            if obj.numEpochsCompleted > sum(obj.descentSeq)
-                obj.searchTag = 'Off';
+            if (strcmp(obj.searchMode,'Off'))
+                 obj.searchTag = 'Off';
+                %display('off_confirmed');
+            elseif (obj.numEpochsCompleted > 2*obj.descentSeq(end))
+                 obj.searchTag = 'Off';
             else absPatchLoc = obj.imagePatchIndex; % absolute location of patch
-                 response = epoch.getResponse(obj.ampDevice);
+                 response = epoch.getResponse(obj.rig.getDevice(obj.amp));
                  sampleRate = response.sampleRate.quantityInBaseUnits;
                  prePts = obj.preTime/1000*sampleRate;
                  stimPts = obj.stimTime/1000*sampleRate;
@@ -295,36 +329,52 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                  epochResponseTrace = epochResponseTrace - mean(epochResponseTrace(1:prePts));
                  meanResp = mean(epochResponseTrace(prePts+1:prePts+stimPts));
                  % store average responses for each tag
-                 if strcmp(epoch.stimulusTag,'image')
+                 if strcmp(obj.stimulusTag,'image')
                    obj.patchResponse(absPatchLoc,1) = obj.patchResponse(absPatchLoc,1)+meanResp;
-                 elseif strcmp(epoch.stimulusTag, 'intensity')
+                 elseif strcmp(obj.stimulusTag, 'intensity')
                    obj.patchResponse(absPatchLoc,2) = meanResp+obj.patchResponse(absPatchLoc,2);
                  end
                  % decide whether need to establish new set
-                 epochInd = floor(obj.numEpochCompleted/2)+1;
-                 if (length(find(obj.descentSeq==epochInd))>0)
+                 epochInd = floor((obj.numEpochsCompleted-1)/2)+1;
+                 %display('epochInd');
+                 %display(epochInd);
+                 if (length(find(obj.descentSeq==epochInd))>0)&&(mod(obj.numEpochsCompleted,2)==0)
                      % now need to update obj.currentPatchIndex
                      r = find(obj.descentSeq==epochInd,1);
                      if r == length(obj.descentSeq)
                          % search finished
-                         tempPatchIndex = ones(r,1);
+                         tempPatchIndex = ones(obj.noPatches,1);
                           obj.searchTag = 'Off';
+                         display('searchoff');
+                          % can save temporal searched image locations
+                          % later
                      else
+                         if (obj.descentSeq(r+1)-obj.descentSeq(r))>obj.noPatches
                          tempPatchIndex = ones(obj.descentSeq(r+1)-obj.descentSeq(r),1);
+                         else tempPatchIndex = ones(obj.noPatches,1);
+                         end
                      end
                      [B,tempInd] = sort(abs(obj.patchResponse(:,1))-abs(obj.patchResponse(:,2)),'descend');
-                      tempPatchIndex = tempInd(1:length(tempPatchIndex));
-                      obj.currentPatchIndex = tempPatchIndex;
+                     tempPatchIndex = tempInd(1:length(tempPatchIndex));
+                     obj.currentPatchIndex = tempPatchIndex;
+                 end
+                 if strcmp(obj.searchTag,'Off')
+                     % store results
+                    cur_Dir = mfilename('fullpath');
+                    resource_loc = strcat(cur_Dir(1:strfind(cur_Dir,'edu')-2),'resource\');
+                    save([resource_loc,obj.imageName,'temp_locs.mat']);
+                    temp_locs = obj.currentPatchIndex;
+                    save([resource_loc,obj.imageName,'temp_locs.mat'],'temp_locs');
                  end
                      
             end
         end
         function tf = shouldWaitToContinuePreparingEpochs(obj)
-            while (obj.numEpochsCompleted < obj.numEpochs)
-                tf = false;
+            while (obj.numEpochsCompleted < obj.numEpochsPrepared)
+                tf = true;
                 pause(0.01);
             end
-            tf  = true;
+            tf  = false;
          end
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;
