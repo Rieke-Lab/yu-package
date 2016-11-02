@@ -369,6 +369,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                      
             end
         end
+        %{
         function tf = shouldWaitToContinuePreparingEpochs(obj)
             while (obj.numEpochsCompleted < obj.numEpochsPrepared)
                 tf = true;
@@ -376,6 +377,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
             end
             tf  = false;
          end
+        %}
         function tf = shouldContinuePreparingEpochs(obj)
             tf = obj.numEpochsPrepared < obj.numberOfAverages;
         end

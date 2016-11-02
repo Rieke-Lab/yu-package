@@ -1,6 +1,9 @@
 classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-
-    properties
+% potential bug: to minimize rotation error; image was cropped as a square
+% (nxn) before display, then an apperture was applied. There are pixel-pixel error caused
+% by rotation, because pixel has to be integer.
+% solution1: calculate equivalent intensity for each rotation
+properties
         preTime = 200 % ms
         stimTime = 200 % ms
         tailTime = 200 % ms
@@ -13,7 +16,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
         rotation = 0 % counterclock
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(180) % number of epochs to queue
+        numberOfAverages = uint16(20) % number of epochs to queue
         amp % Output amplifier
     end
     
@@ -83,7 +86,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
             radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             radY = round(stimSize_VHpix(2) / 2);
-            
+            rad = max(radX,radY);
             %get patch locations: store here 1 - 10 different patches
             %load([resourcesDir,'NaturalImageFlashLibrary_072216.mat']);
             %fieldName = ['imk', obj.imageName];
@@ -114,21 +117,24 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
            % obj.patchLocations(1,1:obj.noPatches) = xLoc';
            % obj.patchLocations(2:1:obj.noPatches) = yLoc';
             
-            
+           % after rotation, the image size is changed
+           f_matrix = ones(2.*[rad rad]+1);
+           r_matrix = imrotate(f_matrix,obj.rotation,'bilinear', 'crop');
+           r_rad = size(r_matrix);
             %get equivalent intensity values:
             %   Get the model RF...
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
-            RF = fspecial('gaussian',2.*[radX radY] + 1,sigmaC);
+            RF = fspecial('gaussian',r_rad,sigmaC);
 
             %   get the aperture to apply to the image...
             %   set to 1 = values to be included (i.e. image is shown there)
-            [rr, cc] = meshgrid(1:(2*radX+1),1:(2*radY+1));
+            [rr, cc] = meshgrid(1:(r_rad(1)),1:(r_rad(2)));
             if obj.apertureDiameter > 0
-                apertureMatrix = sqrt((rr-radX).^2 + ...
-                    (cc-radY).^2) < (obj.apertureDiameter/2) ./ 3.3;
+                apertureMatrix = sqrt((rr-floor(r_rad(1)/2)).^2 + ...
+                    (cc-floor(r_rad(2)/2)).^2) < (obj.apertureDiameter/2) ./ 3.3;
                 apertureMatrix = apertureMatrix';
             else
-                apertureMatrix = ones(2.*[radX radY] + 1);
+                apertureMatrix = ones(r_rad);
             end
             if strcmp(obj.linearIntegrationFunction,'gaussian center')
                 weightingFxn = apertureMatrix .* RF; %set to zero mean gray pixels
@@ -136,11 +142,14 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
                 weightingFxn = apertureMatrix;
             end
             weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
-            
+           % display(size(weightingFxn));
             for ff = 1:obj.noPatches
                 %display(size(obj.patchLocations));
-                tempPatch = contrastImage(round(obj.patchLocations(1,ff)-radX):round(obj.patchLocations(1,ff)+radX),...
-                    round(obj.patchLocations(2,ff)-radY):round(obj.patchLocations(2,ff)+radY));
+                tempPatch = contrastImage(round(obj.patchLocations(1,ff)-rad):round(obj.patchLocations(1,ff)+rad),...
+                    round(obj.patchLocations(2,ff)-rad):round(obj.patchLocations(2,ff)+rad));
+                tempPatch = imrotate(tempPatch, obj.rotation, 'bilinear', 'crop');
+                tempPatch = tempPatch';
+                %display(size(tempPatch));
                 equivalentContrast = sum(sum(weightingFxn .* tempPatch));
                 obj.allEquivalentIntensityValues(ff) = obj.backgroundIntensity + ...
                     equivalentContrast * obj.backgroundIntensity;
@@ -174,12 +183,16 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
                 obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
             stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
-            radX = stimSize_VHpix(1) / 2; %boundaries for fixation draws depend on stimulus size
-            radY = stimSize_VHpix(2) / 2;
-            obj.imagePatchMatrix = obj.wholeImageMatrix(round(obj.currentPatchLocation(1)-radX):round(obj.currentPatchLocation(1)+radX),...
-                round(obj.currentPatchLocation(2)-radY):round(obj.currentPatchLocation(2)+radY));
+            radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
+            radY = round(stimSize_VHpix(2) / 2);
+            rad = max(radX, radY);
+            obj.imagePatchMatrix = obj.wholeImageMatrix((obj.currentPatchLocation(1)-rad):(obj.currentPatchLocation(1)+rad),...
+                (obj.currentPatchLocation(2)-rad):(obj.currentPatchLocation(2)+rad));
+           
+            obj.imagePatchMatrix = imrotate(obj.imagePatchMatrix, obj.rotation,'bilinear', 'crop');
             obj.imagePatchMatrix = obj.imagePatchMatrix';
-            obj.imagePatchMatrix = imrotate(obj.imagePatchMatrix, obj.rotation, 'loose');
+            %display(size(obj.imagePatchMatrix));
+            %display(obj.imagePatchMatrix(rad+1,rad+1));
 %             figure(30); clf;
 %             imagesc(obj.imagePatchMatrix); colormap(gray); axis image; axis equal;
 
@@ -228,6 +241,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture
+                %display(apertureDiameterPix/max(canvasSize));
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
             end
