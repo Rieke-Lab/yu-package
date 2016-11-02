@@ -10,7 +10,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
         linearIntegrationFunction = 'gaussian center'
         patchSampling = 'Inh'
         rfSigmaCenter = 50 % (um) Enter from fit RF
-
+        rotation = 0 % counterclock
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
         numberOfAverages = uint16(180) % number of epochs to queue
@@ -179,6 +179,7 @@ classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLab
             obj.imagePatchMatrix = obj.wholeImageMatrix(round(obj.currentPatchLocation(1)-radX):round(obj.currentPatchLocation(1)+radX),...
                 round(obj.currentPatchLocation(2)-radY):round(obj.currentPatchLocation(2)+radY));
             obj.imagePatchMatrix = obj.imagePatchMatrix';
+            obj.imagePatchMatrix = imrotate(obj.imagePatchMatrix, obj.rotation, 'loose');
 %             figure(30); clf;
 %             imagesc(obj.imagePatchMatrix); colormap(gray); axis image; axis equal;
 
