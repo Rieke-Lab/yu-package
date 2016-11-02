@@ -8,7 +8,6 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
         patchLoc = [400,400]; % pixels
         temporalFrequency = 4 % Hz
         waveform = 'sine';
-        phase = 0; % 0 - 2pi
         apertureDiameter = 200; % um
         centerOffset = [0, 0] % [x,y] (um)
         rfSigmaCenter = 50 % (um) Enter from fit RF
@@ -142,7 +141,6 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 waveform_flag = 1;
             else waveform_flag =0;
             end
-            iniphase = obj.phase;
             if strcmp(obj.stimulusTag,'image')
                 scene = stage.builtin.stimuli.Image(obj.imageMatrix);
                 scene.size = canvasSize; %scale up to canvas size
@@ -153,7 +151,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 p.addStimulus(scene);
                 if (obj.temporalFrequency>0)
                  sceneMatrix = stage.builtin.controllers.PropertyController(scene,'imageMatrix',...
-                     @(state)getSceneMatrix(tempImageMatrix, state.time - obj.preTime/1e3,background,freq,waveform_flag, iniphase));
+                     @(state)getSceneMatrix(tempImageMatrix, state.time - obj.preTime/1e3,background,freq,waveform_flag));
                  p.addController(sceneMatrix);
                 end
                 display('scene added');
@@ -168,7 +166,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 p.addStimulus(scene);
                 if(obj.temporalFrequency>0)
                  sceneColor = stage.builtin.controllers.PropertyController(scene,'color',...
-                     @(state)getSceneColor(equiIntensity, state.time - obj.preTime/1e3,background,freq, waveform_flag, iniphase));
+                     @(state)getSceneColor(equiIntensity, state.time - obj.preTime/1e3,background,freq, waveform_flag));
                   p.addController(sceneColor);
                 end
                 display('scene added too');
@@ -185,34 +183,15 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 aperture.setMask(mask);
                 p.addStimulus(aperture); %add aperture
             end
-            function p = getSceneMatrix(img, time, b,f,w,p)
+            function p = getSceneMatrix(img, time, b,f,w)
                 % alternate image intensity
-                     if time>0
-                        contra = (img-b)/b*cos(time*f*pi*2+p);
-                        if (w == 0)
-                            %square wave
-                            if cos(time*f*pi*2)>0
-                                contra = (img-b)/b;
-                            else contra = -(img-b)/b;
-                            end
-                        end
+                     if time>=0
+                        contra = (img-b)/b*cos(time*f*pi*2);
                         p = contra*b+b;
-                     else p = img;
-                     end
             end
-            function p = getSceneColor(intensity,time, b, f,w,p)
-                     if time >0
-                     contra = (intensity-b)/b*cos(time*f*pi*2+p);
-                     if (w == 0)
-                            %square wave
-                            if cos(time*f*pi*2)>0
-                                contra = (intensity-b)/b;
-                            else contra = -(intensity-b)/b;
-                            end
-                     end
+            function p = getSceneColor(intensity,time, b, f,w)
+                     contra = (intensity-b)/b*cos(time*f*pi*2);
                      p = contra*b+b;
-                     else p = intensity;
-                     end
             end
         end
         
