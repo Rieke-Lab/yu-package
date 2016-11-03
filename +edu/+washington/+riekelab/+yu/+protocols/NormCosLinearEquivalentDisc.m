@@ -37,7 +37,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
         imagePatchMatrix
         allEquivalentIntensityValues 
         patchLocations
-        currentPatchNo
+        %currentPatchNo
         patchResponse
         searchTag % reduce during search steps
         % map current patch index to abs index
