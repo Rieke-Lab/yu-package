@@ -1,8 +1,5 @@
 classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-% potential bug: to minimize rotation error; image was cropped as a square
-% (nxn) before display, then an apperture was applied. There are pixel-pixel error caused
-% by rotation, because pixel has to be integer.
-% solution1: calculate equivalent intensity for each rotation
+%  
 properties
         preTime = 200 % ms
         stimTime = 200 % ms
@@ -86,7 +83,6 @@ properties
             stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
             radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             radY = round(stimSize_VHpix(2) / 2);
-            rad = max(radX,radY);
             %get patch locations: store here 1 - 10 different patches
             %load([resourcesDir,'NaturalImageFlashLibrary_072216.mat']);
             %fieldName = ['imk', obj.imageName];
@@ -118,7 +114,7 @@ properties
            % obj.patchLocations(2:1:obj.noPatches) = yLoc';
             
            % after rotation, the image size is changed
-           f_matrix = ones(2.*[rad rad]+1);
+           f_matrix = ones(2.*[radX radY]+1);
            r_matrix = imrotate(f_matrix,obj.rotation,'bilinear', 'crop');
            r_rad = size(r_matrix);
             %get equivalent intensity values:
@@ -145,8 +141,8 @@ properties
            % display(size(weightingFxn));
             for ff = 1:obj.noPatches
                 %display(size(obj.patchLocations));
-                tempPatch = contrastImage(round(obj.patchLocations(1,ff)-rad):round(obj.patchLocations(1,ff)+rad),...
-                    round(obj.patchLocations(2,ff)-rad):round(obj.patchLocations(2,ff)+rad));
+                tempPatch = contrastImage(round(obj.patchLocations(1,ff)-radX):round(obj.patchLocations(1,ff)+radX),...
+                    round(obj.patchLocations(2,ff)-radY):round(obj.patchLocations(2,ff)+radY));
                 tempPatch = imrotate(tempPatch, obj.rotation, 'bilinear', 'crop');
                 tempPatch = tempPatch';
                 %display(size(tempPatch));
@@ -185,9 +181,9 @@ properties
             stimSize_VHpix = stimSize ./ (3.3); %um / (um/pixel) -> pixel
             radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             radY = round(stimSize_VHpix(2) / 2);
-            rad = max(radX, radY);
-            obj.imagePatchMatrix = obj.wholeImageMatrix((obj.currentPatchLocation(1)-rad):(obj.currentPatchLocation(1)+rad),...
-                (obj.currentPatchLocation(2)-rad):(obj.currentPatchLocation(2)+rad));
+            %rad = max(radX, radY);
+            obj.imagePatchMatrix = obj.wholeImageMatrix((obj.currentPatchLocation(1)-radX):(obj.currentPatchLocation(1)+radX),...
+                (obj.currentPatchLocation(2)-radY):(obj.currentPatchLocation(2)+radY));
            
             obj.imagePatchMatrix = imrotate(obj.imagePatchMatrix, obj.rotation,'bilinear', 'crop');
             obj.imagePatchMatrix = obj.imagePatchMatrix';
