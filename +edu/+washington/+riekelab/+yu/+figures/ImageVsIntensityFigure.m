@@ -11,7 +11,8 @@ classdef ImageVsIntensityFigure < symphonyui.core.FigureHandler
         axesHandle
         lineHandle
         unityHandle
-        
+        lineHandle2
+        lineHandle3
         allEpochResponses
         allPatchIndices
         summaryData
@@ -57,7 +58,7 @@ classdef ImageVsIntensityFigure < symphonyui.core.FigureHandler
             sampleRate = response.sampleRate.quantityInBaseUnits;
             imagePatchIndex = epoch.parameters('imagePatchIndex');
             stimulusTag = epoch.parameters('stimulusTag');
-            
+            changeIndex = 0;
             if strcmp(obj.recordingType,'extracellular') %spike recording
                 %take (prePts+1:prePts+stimPts)
                 epochResponseTrace = epochResponseTrace((sampleRate*obj.preTime/1000)+1:(sampleRate*(obj.preTime + obj.stimTime)/1000));
@@ -87,10 +88,17 @@ classdef ImageVsIntensityFigure < symphonyui.core.FigureHandler
                 imageResps = obj.allEpochResponses(1:2:end);
                 linearResps = obj.allEpochResponses(2:2:end);
                 unInds = unique(tempInds);
+                if(length(tempInds)>length(unInds))
+                    last_imageResponses = obj.summaryData.imageResponses;
+                    last_linearResponses = obj.summaryData.linearResponses;
+                end
                 for uu = 1:length(unInds)
                     pullBinary = (tempInds == unInds(uu));
                     obj.summaryData.imageResponses(uu) = mean(imageResps(pullBinary));
                     obj.summaryData.linearResponses(uu) = mean(linearResps(pullBinary));
+                end
+                if (length(tempInds)>length(unInds))
+                    changeIndex = (obj.summaryData.imageResponses ~= last_imageResponses);
                 end
             end
             limDown = min([obj.summaryData.imageResponses obj.summaryData.linearResponses]);
@@ -103,6 +111,22 @@ classdef ImageVsIntensityFigure < symphonyui.core.FigureHandler
                 set(obj.lineHandle, 'XData', obj.summaryData.imageResponses,...
                     'YData', obj.summaryData.linearResponses);
             end
+           % pause(0.2);
+            hold on;
+            
+            if (sum(changeIndex)>0)
+                if isempty(obj.lineHandle2)
+                 obj.lineHandle2 = line(last_imageResponses(changeIndex),last_linearResponses(changeIndex),...
+                    'Parent',obj.axesHandle,'Color','k','Marker','o','MarkerFaceColor','k');
+                 obj.lineHandle3 = line(obj.summaryData.imageResponses(changeIndex),obj.summaryData.linearResponses(changeIndex),...
+                    'Parent',obj.axesHandle,'Color','k','Marker','o','MarkerFaceColor','r');
+                else
+                    set(obj.lineHandle2,'XData',last_imageResponses(changeIndex),'YData',last_linearResponses(changeIndex));
+                    set(obj.lineHandle3,'XData',obj.summaryData.imageResponses(changeIndex),'YData',obj.summaryData.linearResponses(changeIndex));
+                end
+            end
+            hold off;
+            
             if isempty(obj.unityHandle)
                 obj.unityHandle = line([limDown limUp] , [limDown limUp],...
                     'Parent', obj.axesHandle,'Color','k','Marker','none','LineStyle','--');

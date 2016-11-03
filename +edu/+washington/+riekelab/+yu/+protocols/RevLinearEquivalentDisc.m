@@ -116,7 +116,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
-            obj.imageMatrix = uint8(obj.imageMatrix.*255);
+            %obj.imageMatrix = uint8(obj.imageMatrix.*255);
 %             figure(30); clf;
 %             imagesc(obj.imagePatchMatrix); colormap(gray); axis image; axis equal;
             
@@ -137,14 +137,14 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             equiIntensity = obj.equivalentIntensity;
-            tempImageMatrix = obj.imageMatrix;
+            tempImageMatrix = obj.imageMatrix; % still between [0 1]
             if strcmp(obj.waveform,'sine')
                 waveform_flag = 1;
             else waveform_flag =0;
             end
             iniphase = obj.phase;
             if strcmp(obj.stimulusTag,'image')
-                scene = stage.builtin.stimuli.Image(obj.imageMatrix);
+                scene = stage.builtin.stimuli.Image(uint8(obj.imageMatrix.*255));
                 scene.size = canvasSize; %scale up to canvas size
                 scene.position = canvasSize/2 + centerOffsetPix;
                 % Use linear interpolation when scaling the image.
@@ -188,24 +188,25 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
             function p = getSceneMatrix(img, time, b,f,w,p)
                 % alternate image intensity
                      if time>0
-                        contra = (img-b)/b*cos(time*f*pi*2+p);
                         if (w == 0)
                             %square wave
-                            if cos(time*f*pi*2)>0
+                            if cos(time*f*pi*2+p)>0
                                 contra = (img-b)/b;
                             else contra = -(img-b)/b;
                             end
+                        else  contra = (img-b)/b*cos(time*f*pi*2+p);
                         end
                         p = contra*b+b;
                      else p = img;
                      end
+                     p = uint8(p.*255);
             end
             function p = getSceneColor(intensity,time, b, f,w,p)
                      if time >0
                      contra = (intensity-b)/b*cos(time*f*pi*2+p);
                      if (w == 0)
                             %square wave
-                            if cos(time*f*pi*2)>0
+                            if cos(time*f*pi*2+p)>0
                                 contra = (intensity-b)/b;
                             else contra = -(intensity-b)/b;
                             end

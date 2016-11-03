@@ -63,7 +63,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
             % read-in the image
             % prepare patch locations
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            obj.showFigure('edu.washington.riekelab.yu.figures.MeanResponseFigure',...
+            obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
                 'groupBy',{'stimulusTag'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
@@ -71,7 +71,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
            
             % specify online analysis methods
             if ~strcmp(obj.onlineAnalysis,'none')
-                obj.showFigure('edu.washington.riekelab.turner.figures.ImageVsIntensityFigure',...
+                obj.showFigure('edu.washington.riekelab.yu.figures.ImageVsIntensityFigure',...
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
@@ -197,7 +197,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                     end
                   end
                end
-            obj.patchResponse = zeros(obj.startPatches,2); % store temporal mean results
+            obj.patchResponse = zeros(obj.startPatches,3); % store temporal mean results
             display(obj.descentSeq);
             end
         end
@@ -331,8 +331,10 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                  % store average responses for each tag
                  if strcmp(obj.stimulusTag,'image')
                    obj.patchResponse(absPatchLoc,1) = obj.patchResponse(absPatchLoc,1)+meanResp;
+                   obj.patchResponse(absPatchLoc,3) = obj.patchResponse(absPatchLoc,3)+1;% accum++
                  elseif strcmp(obj.stimulusTag, 'intensity')
                    obj.patchResponse(absPatchLoc,2) = meanResp+obj.patchResponse(absPatchLoc,2);
+                   obj.patchResponse(absPatchLoc,3) = obj.patchResponse(absPatchLoc,3)+1;% accum++
                  end
                  % decide whether need to establish new set
                  epochInd = floor((obj.numEpochsCompleted-1)/2)+1;
@@ -354,7 +356,8 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                          else tempPatchIndex = ones(obj.noPatches,1);
                          end
                      end
-                     [B,tempInd] = sort(abs(obj.patchResponse(:,1))-abs(obj.patchResponse(:,2)),'descend');
+                     [B,tempInd] = sort(abs(obj.patchResponse(:,1)- obj.patchResponse(:,2))...
+                         ./(floor(obj.patchResponse(:,3)/2)+1),'descend');
                      tempPatchIndex = tempInd(1:length(tempPatchIndex));
                      obj.currentPatchIndex = tempPatchIndex;
                  end
