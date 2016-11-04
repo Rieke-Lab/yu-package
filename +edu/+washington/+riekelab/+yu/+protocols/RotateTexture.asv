@@ -58,16 +58,15 @@ classdef RotateTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             %size of the stimulus on the prep:
             stimSize = obj.rig.getDevice('Stage').getCanvasSize(); %um
-            %stimSize_VHpix = round(stimSize ./ (3.3)); %um / (um/pixel) -> pixel
+            stimSize_VHpix = round(stimSize ./ (3.3)); %um / (um/pixel) -> pixel
             %radX = round(stimSize_VHpix(1) / 2); %boundaries for fixation draws depend on stimulus size
             %radY = round(stimSize_VHpix(2) / 2);
             % make properiate texture input
             sigmaPix =  obj.rig.getDevice('Stage').um2pix(obj.centerSigma);
             obj.currentSeed = RandStream.shuffleSeed;
-            obj.centerTexture = edu.washington.riekelab.yu.utils.makeRecTextureMatrix(stimSize,...
+            obj.centerTexture = edu.washington.riekelab.yu.utils.makeRecTextureMatrix(stimSize_VHpix,...
                     sigmaPix/2, obj.currentSeed, obj.background, obj.contrast);
             obj.centerTexture = uint8(obj.centerTexture .* 255)';
-            %display(size(obj.centerTexture));
         end
         
         function prepareEpoch(obj, epoch)
