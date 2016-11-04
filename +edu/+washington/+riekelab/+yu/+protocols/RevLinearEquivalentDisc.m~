@@ -33,7 +33,6 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
          currentStimSet
          backgroundIntensity
          stimulusTag
-         weightMatrix
     end
     
     methods
@@ -101,7 +100,6 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
             equivalentContrast = sum(sum(weightingFxn .* tempPatch));
             obj.equivalentIntensity = obj.backgroundIntensity + ...
                     equivalentContrast * obj.backgroundIntensity;
-            obj.weightMatrix = weightingFxn;
         end
         
         function prepareEpoch(obj, epoch)
@@ -172,8 +170,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 p.addStimulus(scene);
                 if(obj.temporalFrequency>0)
                  sceneColor = stage.builtin.controllers.PropertyController(scene,'color',...
-                     @(state)getSceneColor(equiIntensity, state.time - obj.preTime/1e3,background,freq,...
-                     waveform_flag, iniphase, tempImageMatrix, obj.weightMatrix));
+                     @(state)getSceneColor(equiIntensity, state.time - obj.preTime/1e3,background,freq, waveform_flag, iniphase));
                   p.addController(sceneColor);
                 end
                 display('scene added too');
@@ -210,7 +207,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                      end
                      p = uint8(p.*255);
             end
-            function p = getSceneColor(intensity,time, b, f,w,p,img,weight)
+            function p = getSceneColor(intensity,time, b, f,w,p)
                      if time >0
                      if (w == 0)
                             %square wave
@@ -221,8 +218,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                      elseif(w==1) 
                          % sine wave
                          contra = (intensity-b)/b*cos(time*f*pi*2+p);
-                     else % only shift phase
-                         contra = sum(sum(cos(time*f*pi*2+acos((img-b)/b)).*weight));
+                     else 
                      end
                      p = contra*b+b;
                      else p = intensity;
