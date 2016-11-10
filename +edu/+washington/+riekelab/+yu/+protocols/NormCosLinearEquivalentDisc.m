@@ -45,6 +45,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
         %saved out to each epoch...
         descentSeq % binary search pool size
         currentStimSet
+        currentPatchNo
         backgroundIntensity
         imagePatchIndex
         currentPatchLocation
