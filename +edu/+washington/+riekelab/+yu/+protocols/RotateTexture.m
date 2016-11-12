@@ -11,6 +11,7 @@ classdef RotateTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         angularInterval = 30 %[0 - 180], speed if select continuous;
         apertureDiameter = 200 % um
         background = 0.2
+        seed = 1
         contrast = 1 %[0 1]
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
@@ -24,11 +25,9 @@ classdef RotateTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         displayModeType = symphonyui.core.PropertyType('char','row',{'flash','continuous'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
-        centerSeed
         centerTexture
         currentTextureMatrix
         rotation
-        currentSeed
      end
     
     methods
@@ -42,9 +41,9 @@ classdef RotateTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
-            %obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
-                %obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
-                %'groupBy',{'stimulusTag'});
+            obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'groupBy',{'rotation'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             %{
@@ -63,9 +62,9 @@ classdef RotateTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             %radY = round(stimSize_VHpix(2) / 2);
             % make properiate texture input
             sigmaPix =  obj.rig.getDevice('Stage').um2pix(obj.centerSigma);
-            obj.currentSeed = RandStream.shuffleSeed;
+            %obj.currentSeed = RandStream.shuffleSeed;
             obj.centerTexture = edu.washington.riekelab.yu.utils.makeRecTextureMatrix(stimSize,...
-                    sigmaPix/2, obj.currentSeed, obj.background, obj.contrast);
+                    sigmaPix/2, obj.seed, obj.background, obj.contrast);
             obj.centerTexture = uint8(obj.centerTexture .* 255)';
             %display(size(obj.centerTexture));
         end
@@ -79,11 +78,16 @@ classdef RotateTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             end
             
             device = obj.rig.getDevice(obj.amp);
-            duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
+            if strcmp(obj.displayMode,'continuous')
+              angular_vel = obj.angularInterval/(obj.preTime+obj.stimTime+obj.tailTime)*1e3; % degree/s
+              total_stimtime = 360/angular_vel*1e3+obj.tailTime;
+            else total_stimtime = obj.stimTime;
+            end
+            duration = (obj.preTime + total_stimtime + obj.tailTime) / 1e3;
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
             epoch.addParameter('rotation', obj.rotation);
-            epoch.addParameter('centerSeed',obj.centerSeed);
+            epoch.addParameter('currentSeed',obj.seed);
         end
         
         function p = createPresentation(obj)
@@ -108,6 +112,7 @@ classdef RotateTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             elseif strcmp(obj.displayMode,'continuous')
                 angular_vel = obj.angularInterval/(obj.preTime+obj.stimTime+obj.tailTime)*1e3; % degree/s
                 total_stimtime = 360/angular_vel*1e3;
+               % display((total_stimtime+obj.preTime)*1e-3);
                 p = stage.core.Presentation((obj.preTime + total_stimtime + obj.tailTime) * 1e-3);
                 p.setBackgroundColor(obj.background);
                 scene=stage.builtin.stimuli.Image(obj.centerTexture);

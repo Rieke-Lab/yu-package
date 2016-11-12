@@ -358,7 +358,7 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                          end
                      end
                      [B,tempInd] = sort(abs(obj.patchResponse(:,1)- obj.patchResponse(:,2))...
-                         ./(floor(obj.patchResponse(:,3)/2)+1),'descend');
+                         ./(floor(obj.patchResponse(:,3)/2)+1),'ascend');
                      tempPatchIndex = tempInd(1:length(tempPatchIndex));
                      obj.currentPatchIndex = tempPatchIndex;
                  end
@@ -366,9 +366,10 @@ classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLa
                      % store results
                     cur_Dir = mfilename('fullpath');
                     resource_loc = strcat(cur_Dir(1:strfind(cur_Dir,'edu')-2),'resource\');
-                    save([resource_loc,obj.imageName,'temp_locs.mat']);
+                    %save([resource_loc,obj.imageName,'temp_locs.mat']);
                     temp_locs = obj.currentPatchIndex;
-                    save([resource_loc,obj.imageName,'temp_locs.mat'],'temp_locs');
+                    patchlocs = obj.patchLocations(:,obj.currentPatchIndex)';
+                    save([resource_loc,obj.imageName,'temp_locs.mat'],'temp_locs','patchlocs');
                  end
                      
             end

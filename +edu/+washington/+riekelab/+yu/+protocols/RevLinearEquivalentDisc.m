@@ -8,7 +8,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
         patchLoc = [400,400]; % pixels
         temporalFrequency = 4 % Hz
         waveform = 'sine';
-        phase = 0; % 0 - 2pi
+        phase = 0; % 0 - 360
         apertureDiameter = 200; % um
         centerOffset = [0, 0] % [x,y] (um)
         rfSigmaCenter = 50 % (um) Enter from fit RF
@@ -146,7 +146,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                 waveform_flag =0;
             else waveform_flag =-1;
             end
-            iniphase = obj.phase;
+            iniphase = obj.phase/180*pi;
             if strcmp(obj.stimulusTag,'image')
                 scene = stage.builtin.stimuli.Image(uint8(obj.imageMatrix.*255));
                 scene.size = canvasSize; %scale up to canvas size
@@ -160,7 +160,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                      @(state)getSceneMatrix(tempImageMatrix, state.time - obj.preTime/1e3,background,freq,waveform_flag, iniphase));
                  p.addController(sceneMatrix);
                 end
-                display('scene added');
+                %display('scene added');
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
@@ -176,7 +176,7 @@ classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabSta
                      waveform_flag, iniphase, tempImageMatrix, obj.weightMatrix));
                   p.addController(sceneColor);
                 end
-                display('scene added too');
+               % display('scene added too');
                 sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
                 p.addController(sceneVisible);
