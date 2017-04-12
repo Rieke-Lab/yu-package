@@ -12,6 +12,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         background = 0.2
         numSeed = 6 % search range
         seedSampling = 'random'
+        edgeSharpen = 'off'
         contrast = 1 %[0 1]
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
@@ -22,6 +23,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     properties (Hidden)
         ampType
         seedSamplingType = symphonyui.core.PropertyType('char','row',{'random','ordered'})
+        edgeSharpenType = symphonyui.core.PropertyType('char','row',{'on','off'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         centerTexture
@@ -30,6 +32,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         currentSigma
         sigmaPixSeq
         seedSeq
+        sharpenParams
      end
     methods
         function didSetRig(obj)
@@ -72,6 +75,15 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                     obj.currentSigma/2, obj.currentSeed, obj.background, obj.contrast);
              obj.centerTexture = uint8(obj.centerTexture .* 255)';
              obj.centerTexture = imrotate(obj.centerTexture, obj.angle, 'bilinear', 'crop');
+             if strcmp(obj.edgeSharpen,'on')
+                 radius = 15;
+                 amount = 2;
+                 threshold = 0.1;
+                 obj.centerTexture = imsharpen(obj.centerTexture,'Radius',radius,'Amount',amount,'Threshold',threshold);
+                 obj.sharpenParams.Radius = radius;
+                 obj.sharpenParams.Amount = amount;
+                 obj.sharpenParams.Threshold= threshold;
+             end
              device = obj.rig.getDevice(obj.amp);
              epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
              epoch.addResponse(device);
