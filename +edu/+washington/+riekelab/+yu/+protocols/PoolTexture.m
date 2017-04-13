@@ -16,7 +16,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         contrast = 1 %[0 1]
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(4) % number of epochs to queue
+        numberOfAverages = uint16(60) % number of epochs to queue
         amp % Output amplifier
     end
     
@@ -27,7 +27,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         centerTexture
-        currentTextureMatrix
+        %currentTextureMatrix
         currentSeed
         currentSigma
         sigmaPixSeq
@@ -67,7 +67,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
              prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
              seedInd = mod(obj.numEpochsPrepared-1,obj.numSeed)+1;
              sz_Sigma = size(obj.numSigma,1);
-             sigmaInd = mod(floor((obj.numEpochPrepared-1)/obj.numSeed),sz_Sigma)+1;
+             sigmaInd = mod(floor((obj.numEpochsPrepared-1)/obj.numSeed),sz_Sigma)+1;
              obj.currentSeed = obj.seedSeq(seedInd);
              obj.currentSigma = obj.sigmaPixSeq(sigmaInd);
              stimSize = obj.rig.getDevice('Stage').getCanvasSize(); %um     
@@ -85,6 +85,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                  obj.sharpenParams.Threshold= threshold;
              end
              device = obj.rig.getDevice(obj.amp);
+             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
              epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
              epoch.addResponse(device);
              epoch.addParameter('currentSeed',obj.currentSeed);
@@ -97,7 +98,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3);
             p.setBackgroundColor(obj.background);
-            scene = stage.builtin.stimuli.Image(obj.currentTextureMatrix);
+            scene = stage.builtin.stimuli.Image(obj.centerTexture);
             scene.size = canvasSize; %scale up to canvas size
             scene.position = canvasSize/2 + centerOffsetPix;
                 % Use linear interpolation when scaling the image.
