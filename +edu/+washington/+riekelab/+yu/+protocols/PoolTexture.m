@@ -23,11 +23,12 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     properties (Hidden)
         ampType
         seedSamplingType = symphonyui.core.PropertyType('char','row',{'random','ordered'})
-        edgeSharpenType = symphonyui.core.PropertyType('char','row',{'on','off'})
+        edgeSharpenType = symphonyui.core.PropertyType('char','row',{'on','off','binary'})
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         centerOffsetType = symphonyui.core.PropertyType('denserealdouble', 'matrix')
         centerTexture
         %currentTextureMatrix
+        currentAngle
         currentSeed
         currentSigma
         sigmaPixSeq
@@ -49,7 +50,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                 'groupBy',{'currentSeed'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
-            
+            obj.showFigure('edu.washington.riekelab.yu.figures.searchFigure',obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groups',360/obj.angle);
             % make properiate texture input
             obj.sigmaPixSeq =  obj.rig.getDevice('Stage').um2pix(obj.numSigma);
             if strcmp(obj.seedSampling,'random')
@@ -65,16 +66,18 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         
         function prepareEpoch(obj, epoch)
              prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
-             seedInd = mod(obj.numEpochsPrepared-1,obj.numSeed)+1;
+             rnum = 360/obj.angle;
+             rotate_id = mod(obj.numEpochPrepared-1,rnum)+1;
+             seedInd = mod(floor((obj.numEpochsPrepared-1)/rnum),obj.numSeed)+1;
              sz_Sigma = size(obj.numSigma,1);
-             sigmaInd = mod(floor((obj.numEpochsPrepared-1)/obj.numSeed),sz_Sigma)+1;
+             sigmaInd = mod(floor((obj.numEpochsPrepared-1)/rnum/obj.numSeed),sz_Sigma)+1;
+             obj.currentAngle = rotate_id*obj.angle;
              obj.currentSeed = obj.seedSeq(seedInd);
              obj.currentSigma = obj.sigmaPixSeq(sigmaInd);
              stimSize = obj.rig.getDevice('Stage').getCanvasSize(); %um     
              obj.centerTexture = edu.washington.riekelab.yu.utils.makeRecTextureMatrix(stimSize,...
                     obj.currentSigma/2, obj.currentSeed, obj.background, obj.contrast);
-             obj.centerTexture = uint8(obj.centerTexture .* 255)';
-             obj.centerTexture = imrotate(obj.centerTexture, obj.angle, 'bilinear', 'crop');
+             obj.centerTexture = imrotate(obj.centerTexture, obj.currentAngle, 'bilinear', 'crop');
              if strcmp(obj.edgeSharpen,'on')
                  radius = 15;
                  amount = 2;
@@ -83,13 +86,18 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                  obj.sharpenParams.Radius = radius;
                  obj.sharpenParams.Amount = amount;
                  obj.sharpenParams.Threshold= threshold;
+             elseif strcmp(obj.edgeSharpen,'binary')
+                 obj.centerTexture(obj.centerTexture<0.5) = 0;
+                 obj.centerTexture(obj.centerTexture>0.5) = 1;
              end
+             obj.centerTexture = uint8(obj.centerTexture .* 255)';
              device = obj.rig.getDevice(obj.amp);
              duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
              epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
              epoch.addResponse(device);
              epoch.addParameter('currentSeed',obj.currentSeed);
              epoch.addParameter('currentSigma',obj.currentSigma);
+             epoch.addParameter('currentAngle',obj.currentAngle);
         end
         
         function p = createPresentation(obj)
