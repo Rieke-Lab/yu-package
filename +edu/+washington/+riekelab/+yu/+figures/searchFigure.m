@@ -47,7 +47,7 @@ classdef searchFigure < symphonyui.core.FigureHandler
         end
         
         function handleEpoch(obj, epoch)
-
+            plotcolors = 'bgrkymc';
             response = epoch.getResponse(obj.ampDevice);
             epochResponseTrace = response.getData();
             sampleRate = response.sampleRate.quantityInBaseUnits;
@@ -75,8 +75,39 @@ classdef searchFigure < symphonyui.core.FigureHandler
                 newEpochResponse = chargeMult*mean(epochResponseTrace); %pA*datapoint
             end
             
+            pcolor = 1
+            
+            if (size(obj.plotTable,1)== 0)
+                recordPlot = {currentSeed, currentSigma, 1};
+                obj.plotTable = [obj.plotTable;recordPlot];
+            else
+                lastrecord = obj.plotTable(obj.plotTable.seed==currentSeed && ...
+                    obj.plotTable.Sigma ==currentSigma,:);
+                if size(lastrecord,1)==0
+                    % the record is new
+                    recordPlot = {currentSeed, currentSigma, max(obj.plotTables.Color)+1};
+                    pcolor = recordPlot{3};
+                    obj.plotTable = [obj.plotTable;recordPlot];
+                else
+                    pcolor = lastrecord.Color;
+                end
+            end
+            
+            lastData = obj.dataTable(obj.dataTable.seed == currentSeed && ...
+                obj.dataTable.Sigma == currentSitma && obj.angle == currentAngle);
+            if (size(lastData,1)==0)
+                % new record
+                recordData = {currentSeed,currentSigma, currentAngle, newEpochResponse,0,1,pcolor}
+                obj.dataTable = [obj.dataTable;recordData];
+            else
+                meanResp = (lastData.mean*lastData.trials+newEpochResponse)/(lastData.trials+1);
+                var = ((lastData.var+lastData.mean^2)*lastData.trials+newEpochResonse^2)/...
+                    (lastData.trials+1)-meanResp^2;
+                trial = lastData.trials+1;
+                
+            end
+            recordData = {currentSeed,currentSigma,currentAngle,newEpochResponse,
+                'seed' 'Sigma' 'angle' 'mean' 'var' 'trials' 'Color'
         end
-        
-    end
 end
 
