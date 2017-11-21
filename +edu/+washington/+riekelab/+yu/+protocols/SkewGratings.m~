@@ -106,10 +106,8 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             epoch.addResponse(device);
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
             epoch.addParameter('stimulusTag', obj.stimulusTag);
-            epoch.addParameter('currentPosBarWidth', obj.currentPosBarWidth);
-            epoch.addParameter('currentNegBarWidth', obj.currentNegBarWidth);
+            epoch.addParameter('currentBarWidth', obj.currentBarWidth);
         end
-        
     end
     
 end
