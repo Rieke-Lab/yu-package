@@ -16,7 +16,6 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         preTime = 200 % ms
         stimTime = 200 % ms
         tailTime = 200 % ms
-        meanIntensity = 0.6 % (0-1), uniform
         backgroundIntensity = 0.5 % (0-1)
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
@@ -42,6 +41,7 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         % saved to each epoch
         stimulusTag
         equimean % equivalent intensity
+        pos_center % 1: positive center; 0: negative center
         int_error = 0.03; % error space due to pixels are int
     end
     
@@ -73,12 +73,6 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                 obj.negBarWidthSequence(i) = obj.posBarWidthSequence(i+1);
                 obj.negBarWidthSequence(i+1) = obj.posBarWidthSequence(i);
             end
-                
-            %obj.barWidthSequence = linspace(obj.minbarWidth,obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter)/2,obj.numBarwidth);
-            %obj.barWidthSequence = ones(1,2*obj.numBarwidth);
-            % alternating the dark and bright bars
-            %obj.barWidthSequence(1:2:2*obj.numBarwidth) = linspace(obj.minbarWidth,obj.apertureDiameter/2,obj.numBarwidth);
-            %obj.barWidthSequence(2:2:2*obj.numBarwidth) = -linspace(obj.minbarWidth,obj.apertureDiameter/2,obj.numBarwidth);
             
         end
         
@@ -87,17 +81,20 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             num_bars = length(obj.barWidth_unit);
             if strcmp(obj.equivalentDisc, 'on')
             % if we alternate between the equivalent disc and gratings
-                stimInd = mod(obj.numEpochsPrepared - 1,2);
+                stimInd = mod(obj.numEpochsPrepared-1,2);
                 if stimInd == 0 % show linear equivalent intensity
                     obj.stimulusTag = 'grating';
                 elseif stimInd == 1 %  show remaining spatial contrast (image - intensity)
-                    obj.stimulusTag = 'disc';
+                    obj.stimulusTag = 'intensity';
                 end
                 barindex = mode(floor((obj.numEpochsPrepared - 1)/2), num_bars)+1;
+                obj.pos_center = mode(obj.numEpochsPrepared, 2);
             else
                 obj.stimulusTag = 'grating';
-                barindex = mode(obj.numEpochsPrepared, num_bars)+1;
+                barindex = mode(obj.numEpochsPrepared-1, num_bars)+1;
+                obj.pos_center = mode(obj.numEpochsPrepared, 2);
             end
+            
             obj.currentPosBarWidth = obj.posBarWidthSeqeuence(barindex);
             obj.currentNegBarWidth = obj.negBarWidthSequence(barindex);
             device = obj.rig.getDevice(obj.amp);
@@ -108,6 +105,7 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             epoch.addParameter('stimulusTag', obj.stimulusTag);
             epoch.addParameter('currentPosBarWidth', obj.currentPosBarWidth);
             epoch.addParameter('currentNegBarWidth', obj.currentNegBarWidth);
+            epoch.addParameter('currentPosCenter', obj.pos_center);
         end
         
         function p = createPresentation(obj)
@@ -117,11 +115,40 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             %maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
-            currentBarWidthPix = obj.rig.getDevice('Stage').um2pix(obj.currentBarWidth);
-            
+            %currentBarWidthPix = obj.rig.getDevice('Stage').um2pix(obj.currentBarWidth);
+            currentunitWidthPix = obj.rig.getDevice('Stage').um2pix(obj.unitWidth);
+            pos_bar_width = obj.currentPosBarWidth;
+            neg_bar_width = obj.currentNegBarWidth;
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
+            skewedMatrix = edu.washington.riekelab.yu.utils.createGratings(obj.backgroundIntensity, currentunitWidthPix, apertureDiameterPix, ...
+                pos_bar_width, neg_bar_width, obj.pos_center);
+            sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
+            %gaussian or uniform
+            obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,skewedMatrix,obj.linearIntegrationFunction);
+            skewedMatrix_image = uint8(skewedMarix.*255);
+            if strcmp(obj.stimulusTag,'intensity')
+                scene = stage.buildin.stimuli.Rectangle();
+                scene.color = obj.equimean;
+            elseif strcmp(obj.stimulusTag, 'grating')
+                scene = stage.builtin.stimuli.Image(skewedMatrix_image);
+            end
+              scene.size = [apertureDiameterPix apertureDiameterPix]; %scale up to canvas size
+            scene.position = canvasSize/2 + centerOffsetPix;
+            p.addStimulus(scene);
+            sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+            p.addController(sceneVisible);
             
+            if  (obj.apertureDiameter > 0) % Create aperture
+                aperture = stage.builtin.stimuli.Rectangle();
+                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.color = obj.backgroundIntensity;
+                aperture.size = [apertureDiameterPix, apertureDiameterPix];
+                mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
+                aperture.setMask(mask);
+                p.addStimulus(aperture); %add aperture
+            end
         end
         
         function tf = shouldContinuePreparingEpochs(obj)
