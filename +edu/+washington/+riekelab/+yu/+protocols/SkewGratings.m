@@ -24,8 +24,8 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         onlineAnalysis = 'none'
         numberOfAverages = uint16(40) % number of epochs to queue
         linearIntegrationFunction = 'gaussian center' % small error due to pixel int
-        maskDiameter = 0; % place holder
         equivalentDisc = 'on' % alternating with equivalent discs
+        maskDiameter = 0; % place holder
         amp
     end
     
