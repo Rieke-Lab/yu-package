@@ -92,6 +92,14 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                     obj.stimulusTag = 'disc';
                 end
             end
+            stimInd = mod(obj.numEpochsPrepared - 1,3);
+            if stimInd == 0 % show linear equivalent intensity
+                obj.stimulusTag = 'intensity';
+            elseif stimInd == 1 %  show remaining spatial contrast (image - intensity)
+                obj.stimulusTag = 'contrast';
+            elseif stimInd == 2 %  show image
+                obj.stimulusTag = 'image';
+            end
             barindex = mod(floor((obj.numEpochsPrepared - 1)/3),obj.numBarwidth*2)+1;
             obj.currentBarWidth = obj.barWidthSequence(barindex);
             device = obj.rig.getDevice(obj.amp);
