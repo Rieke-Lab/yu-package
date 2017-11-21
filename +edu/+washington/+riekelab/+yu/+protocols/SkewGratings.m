@@ -16,7 +16,6 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         preTime = 200 % ms
         stimTime = 200 % ms
         tailTime = 200 % ms
-        meanIntensity = 0.6 % (0-1), uniform
         backgroundIntensity = 0.5 % (0-1)
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
@@ -108,6 +107,28 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             epoch.addParameter('stimulusTag', obj.stimulusTag);
             epoch.addParameter('currentPosBarWidth', obj.currentPosBarWidth);
             epoch.addParameter('currentNegBarWidth', obj.currentNegBarWidth);
+        end
+        
+        function p = createPresentation(obj)
+            canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
+            
+            %convert from microns to pixels...
+            apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
+            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
+            %maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
+            currentBarWidthPix = obj.rig.getDevice('Stage').um2pix(obj.currentBarWidth);
+            
+            p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
+            p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
+            
+        end
+        
+        function tf = shouldContinuePreparingEpochs(obj)
+            tf = obj.numEpochsPrepared < obj.numberOfAverages;
+        end
+        
+        function tf = shouldContinueRun(obj)
+            tf = obj.numEpochsCompleted < obj.numberOfAverages;
         end
         
     end

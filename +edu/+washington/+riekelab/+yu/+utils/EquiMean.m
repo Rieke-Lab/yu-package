@@ -7,7 +7,7 @@ function Intensity = EquiMean( SigmaC, image, Tag )
       weightingFxn = apertureMatrix .* RF;
       weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
       Intensity = sum(sum(weightingFxn .* double(image))); 
-      elseif strcmp(Tag,'uniform')
+   elseif strcmp(Tag,'uniform')
       Intensity = mean(image(:));
    end
 
