@@ -41,6 +41,8 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         % saved to each epoch
         stimulusTag
         equimean % equivalent intensity
+        posBarWidthSequence % bar width sequence in the unit of basic bar width
+        negBarWidthSequence
         pos_center % 1: positive center; 0: negative center
         int_error = 0.03; % error space due to pixels are int
     end
@@ -65,7 +67,7 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
-            obj.posBarWidthSeqeuence = obj.unitWidth.*obj.barWidth_unit;
+            obj.posBarWidthSequence = obj.barWidth_unit;
             % negative contrast bar width sequence (switch every other
             % location)
             obj.negBarWidthSequence = obj.barWidth_unit;
@@ -93,7 +95,7 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                 barindex = mode(obj.numEpochsPrepared-1, num_bars)+1;
             end
             obj.pos_center = mod(barindex,2);
-            obj.currentPosBarWidth = obj.posBarWidthSeqeuence(barindex);
+            obj.currentPosBarWidth = obj.posBarWidthSequence(barindex);
             obj.currentNegBarWidth = obj.negBarWidthSequence(barindex);
             device = obj.rig.getDevice(obj.amp);
             duration = (obj.preTime + obj.stimTime + obj.tailTime) / 1e3;
@@ -111,7 +113,7 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             %convert from microns to pixels...
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
-            centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
+            %centerOffsetPix = obj.rig.getDevice('Stage').um2pix(obj.centerOffset);
             %maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
             %currentBarWidthPix = obj.rig.getDevice('Stage').um2pix(obj.currentBarWidth);
             currentunitWidthPix = obj.rig.getDevice('Stage').um2pix(obj.unitWidth);
@@ -119,20 +121,23 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             neg_bar_width = obj.currentNegBarWidth;
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
-            skewedMatrix = edu.washington.riekelab.yu.utils.createGratings(obj.backgroundIntensity, currentunitWidthPix, apertureDiameterPix, ...
+            display(pos_bar_width);
+            display(neg_bar_width);
+            display(obj.pos_center);
+            skewedMatrix = edu.washington.riekelab.yu.utils.createSkewGratings(obj.backgroundIntensity, currentunitWidthPix, apertureDiameterPix, ...
                 pos_bar_width, neg_bar_width, obj.pos_center);
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
             %gaussian or uniform
             obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,skewedMatrix,obj.linearIntegrationFunction);
-            skewedMatrix_image = uint8(skewedMarix.*255);
+            skewedMatrix_image = uint8(skewedMatrix.*255);
             if strcmp(obj.stimulusTag,'intensity')
-                scene = stage.buildin.stimuli.Rectangle();
+                scene = stage.builtin.stimuli.Rectangle();
                 scene.color = obj.equimean;
             elseif strcmp(obj.stimulusTag, 'grating')
                 scene = stage.builtin.stimuli.Image(skewedMatrix_image);
             end
               scene.size = [apertureDiameterPix apertureDiameterPix]; %scale up to canvas size
-            scene.position = canvasSize/2 + centerOffsetPix;
+            %scene.position = canvasSize/2 + centerOffsetPix;
             p.addStimulus(scene);
             sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
                     @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
@@ -140,7 +145,7 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
             if  (obj.apertureDiameter > 0) % Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;% + centerOffsetPix;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [apertureDiameterPix, apertureDiameterPix];
                 mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
