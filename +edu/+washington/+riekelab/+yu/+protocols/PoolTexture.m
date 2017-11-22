@@ -6,17 +6,17 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         preTime = 200 %ms
         stimTime = 200 % ms
         tailTime = 200 % ms
-        numSigma = [20 40 60 80] %texture space
+        numSigma = [15 30 40] %texture space
         angle = 45 %[0 - 180],fixed
         apertureDiameter = 200 % um
         background = 0.2
-        numSeed = 6 % search range
+        numSeed = 3 % search range
         seedSampling = 'random'
         edgeSharpen = 'off'
         contrast = 1 %[0 1]
         centerOffset = [0, 0] % [x,y] (um)
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(60) % number of epochs to queue
+        numberOfAverages = uint16(90) % number of epochs to queue
         amp % Output amplifier
     end
     
@@ -50,10 +50,11 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                 'groupBy',{'currentSeed'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
-            obj.showFigure('edu.washington.riekelab.yu.figures.searchFigure',obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groups',360/obj.angle);
+           % obj.showFigure('edu.washington.riekelab.yu.figures.searchFigure',obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,'groups',360/obj.angle);
             % make properiate texture input
             obj.sigmaPixSeq =  obj.rig.getDevice('Stage').um2pix(obj.numSigma);
-            if strcmp(obj.seedSampling,'random')
+            %display(obj.sigmaPixSeq)
+            if ~strcmp(obj.seedSampling,'random')
                 obj.seedSeq = 1:obj.numSeed;
             else obj.seedSeq = randi([1,100],1,obj.numSeed);
             end
@@ -67,13 +68,14 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         function prepareEpoch(obj, epoch)
              prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
              rnum = 360/obj.angle;
-             rotate_id = mod(obj.numEpochPrepared-1,rnum)+1;
+             rotate_id = mod(obj.numEpochsPrepared-1,rnum)+1;
              seedInd = mod(floor((obj.numEpochsPrepared-1)/rnum),obj.numSeed)+1;
-             sz_Sigma = size(obj.numSigma,1);
+             sz_Sigma = size(obj.numSigma,2);
              sigmaInd = mod(floor((obj.numEpochsPrepared-1)/rnum/obj.numSeed),sz_Sigma)+1;
              obj.currentAngle = rotate_id*obj.angle;
              obj.currentSeed = obj.seedSeq(seedInd);
              obj.currentSigma = obj.sigmaPixSeq(sigmaInd);
+             display(strcat('current seed is:',num2str(obj.currentSeed),' current Sigma is:',num2str(obj.currentSigma)));
              stimSize = obj.rig.getDevice('Stage').getCanvasSize(); %um     
              obj.centerTexture = edu.washington.riekelab.yu.utils.makeRecTextureMatrix(stimSize,...
                     obj.currentSigma/2, obj.currentSeed, obj.background, obj.contrast);
@@ -87,8 +89,8 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                  obj.sharpenParams.Amount = amount;
                  obj.sharpenParams.Threshold= threshold;
              elseif strcmp(obj.edgeSharpen,'binary')
-                 obj.centerTexture(obj.centerTexture<0.5) = 0;
-                 obj.centerTexture(obj.centerTexture>0.5) = 1;
+                 obj.centerTexture(obj.centerTexture<obj.background) = 0;
+                 obj.centerTexture(obj.centerTexture>obj.background) = obj.background*2;
              end
              obj.centerTexture = uint8(obj.centerTexture .* 255)';
              device = obj.rig.getDevice(obj.amp);
@@ -98,6 +100,7 @@ classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
              epoch.addParameter('currentSeed',obj.currentSeed);
              epoch.addParameter('currentSigma',obj.currentSigma);
              epoch.addParameter('currentAngle',obj.currentAngle);
+             epoch.addParameter('edgeShapren',obj.edgeSharpen);
         end
         
         function p = createPresentation(obj)
