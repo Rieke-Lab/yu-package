@@ -20,7 +20,7 @@ function gratingMatrix = createSkewGratings(offset,unitbarwidth,sz,pos_num, neg_
                 pt = pt + pos_num/2*unitbarwidth;
                 pos_tag = 0;
             elseif(pos_tag)
-                wave(pt:min(sz,pos_num*unitbarwidth)) = 1;
+                wave(pt:min(sz,pt+pos_num*unitbarwidth)) = 1;
                 wave(max(1, 2*center-pt-pos_num*unitbarwidth):2*center-pt)=1;
                 pt = pt + pos_num*unitbarwidth;
                 pos_tag = 0;
@@ -38,7 +38,7 @@ function gratingMatrix = createSkewGratings(offset,unitbarwidth,sz,pos_num, neg_
                 pt = pt+neg_num/2*unitbarwidth;
                 pos_tag = 1;
             elseif(pos_tag)
-                wave(pt:min(sz,pos_num*unitbarwidth)) = 1;
+                wave(pt:min(sz,pt+pos_num*unitbarwidth)) = 1;
                 wave(max(1, 2*center-pt-pos_num*unitbarwidth):2*center-pt)=1;
                 pt = pt + pos_num*unitbarwidth;
                 pos_tag = 0;
