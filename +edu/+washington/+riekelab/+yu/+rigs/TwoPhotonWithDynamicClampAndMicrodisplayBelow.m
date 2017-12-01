@@ -3,11 +3,16 @@ classdef TwoPhotonWithDynamicClampAndMicrodisplayBelow < symphonyui.core.descrip
     methods
 
         function obj = TwoPhotonWithDynamicClampAndMicrodisplayBelow()
+            import symphonyui.builtin.daqs.*;
             import symphonyui.builtin.devices.*;
             import symphonyui.core.*;
             import edu.washington.*;
-            
-            daq = obj.daqController;
+
+            daq = HekaDaqController();
+            obj.daqController = daq;
+
+            amp1 = MultiClampDevice('Amp1', 1).bindStream(daq.getStream('ao0')).bindStream(daq.getStream('ai0'));
+            obj.addDevice(amp1);
             
             ramps = containers.Map();
             ramps('minimum') = linspace(0, 65535, 256);
