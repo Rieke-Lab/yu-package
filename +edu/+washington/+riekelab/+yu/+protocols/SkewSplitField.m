@@ -9,8 +9,9 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         backgroundIntensity = 0.5 % (0-1)
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
-        negContrast = -0.6 %(-1 - 0)
-        posContrast = 0.9 %(0 - 1)
+        negContrast = [-0.9, -0.75, -0.5, -0.3, -0.2] %(-1 - 0)
+        posContrast = [0.2, 0.3, 0.5, 0.75, 0.9] %(0 - 1)
+        vertical = true
         onlineAnalysis = 'none'
         numberOfAverages = uint16(12) % number of epochs to queue
         linearIntegrationFunction = 'gaussian center' % small error due to pixel int
@@ -23,7 +24,9 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
         stimulusTag % even or skewed
+        delta_seq
         delta_x
+        delta_y
     end
     
     
@@ -46,6 +49,19 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
+            len_contra = length(obj.posContrast);
+            obj.delta_seq = ones(len_contra,1);
+            apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
+            sigmaC = obj.rfSigmaCenter ./ 3.3;
+            for i = 1:len_contra
+                [equi_contrast, delta_pos] = getDeltapos(sigmaC, apertureDiameterPix,...
+                    obj.posContrast(i), obj.negContrast(i),obj.linearIntegrationFunction);
+                obj.delta_seq(i) = delta_pos;
+                if equi_contrast > 0.05
+                    display('attention: equivalent contrast not canceled')
+                end
+            end
+            
         end
         
         function prepareEpoch(obj, epoch)
