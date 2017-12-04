@@ -13,7 +13,7 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         posContrast = [0.2, 0.3, 0.5, 0.75, 0.9] %(0 - 1)
         vertical = true
         onlineAnalysis = 'none'
-        numberOfAverages = uint16(12) % number of epochs to queue
+        numberOfAverages = uint16(40) % number of epochs to queue
         linearIntegrationFunction = 'gaussian center' % small error due to pixel int
         maskDiameter = 0; % place holder
         amp
@@ -23,10 +23,10 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
-        stimulusTag % even or skewed
-        delta_seq
+        delta_seq % all in units of pixels
         delta_x
         delta_y
+        contras % left and right field contrast
     end
     
     
@@ -67,12 +67,20 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
         function prepareEpoch(obj, epoch)
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
             stimInd = mod(obj.numEpochsPrepared-1,2);
+            contraInd = mod(floor((obj.numEpochsPrepared-1)/2), length(obj.posContrast))+1;
             if stimInd == 0 % show skewed split-field
-                obj.stimulusTag = 'skewed';
+                obj.contras = [obj.posContrast(contraInd), obj.negContrast(contraInd)];
             elseif stimInd == 1 %  show remaining spatial contrast (image - intensity)
-                obj.stimulusTag = 'even';
+                obj.contras = [obj.posContrast(contraInd), obj.negContrast(contraInd)];
             end
-            %TODO: calculate delta_x
+            
+            if obj.vertical
+                obj.delta_x = obj.delta_seq(contraInd);
+                obj.delta_y = 0;
+            else
+                obj.delta_x = 0;
+                obj.delta_y = obj.delta_seq(contraInd);
+            end
             
             %
             device = obj.rig.getDevice(obj.amp);
@@ -80,11 +88,47 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             epoch.addDirectCurrentStimulus(device, device.background, duration, obj.sampleRate);
             epoch.addResponse(device);
             epoch.addParameter('backgroundIntensity', obj.backgroundIntensity);
-            epoch.addParameter('stimulusTag', obj.stimulusTag);
+            epoch.addParameter('contras', obj.contras);
             epoch.addParameter('delta_x', obj.delta_x);
+            epoch.addParameter('delta_y', obj.delta_y);
         end
         
         function p = createPresentation(obj)
+            canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
+            apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
+            p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
+            p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
+            splitFieldMatrix = zeros(apertureDiameterPix);
+            d = max(obj.delta_x, obj.delta_y);
+            if abs(obj.contras(1)) < abs(obj.contras(2))
+                splitFieldMatrix(:,1:d) = obj.contras(1);
+                splitFieldMatrix(:,d+1:apertureDiameterPix) = obj.contras(2);
+            else
+                splitFieldMatrix(:,1:apertureDiameterPix-d) = obj.contrast(1);
+                splitFieldMatrix(:,apertureDiameterPix-d+1:apertureDiameterPix) = obj.contras(2);
+            end
+            if obj.delta_y ~= 0
+                splitFieldMatrix = splitFieldMatrix';
+            end
+            splitFieldMatrix = splitFieldMatrix*obj.backgroundIntensity+obj.backgroundIntensity;
+            splitFieldMatrix = uint(splitFieldMatrix.*255);
+            scene = stage.builtin.stimuli.Image(splitFieldMatrix);
+            scene.size = [apertureDiameterPix, apertureDiameterPix];
+            scene.position = canvasSize/2;%+ centerOffsetPix;
+            p.addStimulus(scene);
+            sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
+                    @(state)state.time >= obj.preTime * 1e-3 && state.time < (obj.preTime + obj.stimTime) * 1e-3);
+            p.addController(sceneVisible);
+            
+            if  (obj.apertureDiameter > 0) % Create aperture
+                aperture = stage.builtin.stimuli.Rectangle();
+                aperture.position = canvasSize/2;% + centerOffsetPix;
+                aperture.color = obj.backgroundIntensity;
+                aperture.size = [apertureDiameterPix, apertureDiameterPix];
+                mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
+                aperture.setMask(mask);
+                p.addStimulus(aperture); %add aperture
+            end
         end
          
         function tf = shouldContinuePreparingEpochs(obj)
