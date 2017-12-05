@@ -41,8 +41,8 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             prepareRun@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj);
             obj.showFigure('symphonyui.builtin.figures.ResponseFigure', obj.rig.getDevice(obj.amp));
             obj.showFigure('edu.washington.riekelab.turner.figures.MeanResponseFigure',...
-               obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
-                'groupBy',{'contras'});
+                obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
+                'groupBy',{'delta_'});
             obj.showFigure('edu.washington.riekelab.turner.figures.FrameTimingFigure',...
                 obj.rig.getDevice('Stage'), obj.rig.getDevice('Frame Monitor'));
             if ~strcmp(obj.onlineAnalysis,'none')
@@ -62,6 +62,7 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
                     display('attention: equivalent contrast not canceled')
                 end
             end
+            
         end
         
         function prepareEpoch(obj, epoch)
@@ -71,7 +72,7 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
             if stimInd == 0 % show skewed split-field
                 obj.contras = [obj.posContrast(contraInd), obj.negContrast(contraInd)];
             elseif stimInd == 1 %  show remaining spatial contrast (image - intensity)
-                obj.contras = [obj.negContrast(contraInd),obj.posContrast(contraInd)];
+                obj.contras = [obj.posContrast(contraInd), obj.negContrast(contraInd)];
             end
             
             if obj.vertical
@@ -104,14 +105,13 @@ classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtoco
                 splitFieldMatrix(:,1:d) = obj.contras(1);
                 splitFieldMatrix(:,d+1:apertureDiameterPix) = obj.contras(2);
             else
-                splitFieldMatrix(:,1:apertureDiameterPix-d) = obj.contras(1);
+                splitFieldMatrix(:,1:apertureDiameterPix-d) = obj.contrast(1);
                 splitFieldMatrix(:,apertureDiameterPix-d+1:apertureDiameterPix) = obj.contras(2);
             end
             if obj.delta_y ~= 0
                 splitFieldMatrix = splitFieldMatrix';
             end
             splitFieldMatrix = splitFieldMatrix*obj.backgroundIntensity+obj.backgroundIntensity;
-            %display(min(splitFieldMatrix(:)));
             splitFieldMatrix = uint8(splitFieldMatrix.*255);
             scene = stage.builtin.stimuli.Image(splitFieldMatrix);
             scene.size = [apertureDiameterPix, apertureDiameterPix];
