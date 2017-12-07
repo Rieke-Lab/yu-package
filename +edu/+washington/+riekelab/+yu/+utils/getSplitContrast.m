@@ -1,4 +1,4 @@
-function [ equi_contrast, pos_contrast, neg_contrast] = getSplitContrast( SigmaC, sz, x_pos, min_c, tag,pos)
+function [ equi_contrast, pos_contrast, neg_contrast] = getSplitContrast( SigmaC, sz, x_pos, min_c, Tag, pos)
 %GETSPLITCONTRAST Summary of this function goes here
 %   Detailed explanation goes here
      r = floor(sz/2);
@@ -11,6 +11,11 @@ function [ equi_contrast, pos_contrast, neg_contrast] = getSplitContrast( SigmaC
     end
     weightingFxn = apertureMatrix.* RF;
     weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
-
+    balanced_sum = sum(sum(weightingFxn(:, 1:x_pos).*min_c));
+    pos_mat = sum(sum(weightingFxn(:,1:pos)));
+    neg_mat = sum(sum(weightingFxn(:,pos+1:sz)));
+    pos_contrast = balanced_sum/pos_mat;
+    neg_contrast = -balanced_sum/neg_mat;
+    equi_contrast = pos_contrast*pos_mat + neg_contrast*neg_mat;
 end
 
