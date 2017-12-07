@@ -1,4 +1,4 @@
-classdef BalancedSkewSplitField
+classdef BalancedSkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     %BALANCEDSKEWSPLITFIELD Summary of this class goes here
     %   With similar goal as the SplitField. 
     % The difference here is c1_Hat*A1 remains constant
@@ -28,11 +28,11 @@ classdef BalancedSkewSplitField
         ampType
         onlineAnalysisType = symphonyui.core.PropertyType('char', 'row', {'none', 'extracellular', 'exc', 'inh'})
         linearIntegrationFunctionType = symphonyui.core.PropertyType('char', 'row', {'gaussian center','uniform'})
-        delta_seq % all in units of pixels
+        pos_seq % all in units of pixels
         delta_x
         delta_y
-        pos_contras_seq
-        neg_contras_seq
+        posContrast
+        negContrast
         contras % left and right field contrast
         %stimulusTag
     end
@@ -57,14 +57,26 @@ classdef BalancedSkewSplitField
                 obj.rig.getDevice(obj.amp),'recordingType',obj.onlineAnalysis,...
                 'preTime',obj.preTime,'stimTime',obj.stimTime);
             end
-            len_contra = length(obj.posContrast);
-            obj.delta_seq = ones(len_contra,1);
+            
+            obj.pos_seq = ones(obj.numSteps,1);
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             sigmaC = obj.rfSigmaCenter ./ 3.3;
-            for i = 1:len_contra
-                [equi_contrast, delta_pos] = edu.washington.riekelab.yu.utils.getDeltapos(sigmaC, apertureDiameterPix,...
-                    obj.posContrast(i), obj.negContrast(i),obj.linearIntegrationFunction);
-                obj.delta_seq(i) = delta_pos;
+            [equi_contrast, pos_right] = edu.washington.riekelab.yu.utils.getDeltapos(sigmaC, apertureDiameterPix,...
+                -obj.minAbsContrast, obj.maxAbsContrast, obj.linearIntegrationFunction);
+            if equi_contrast > 0.05
+                display('attention: equivalent contrast not canceled')
+            end
+            pos_left = apertureDiameterPix - pos_right; 
+            obj.pos_seq = round(linspace(pos_left, pos_right, obj.numSteps));
+            obj.posContrast(1) = obj.maxAbsContrast;
+            obj.posContrast(obj.numSteps) = obj.minAbsContrast;
+            obj.negContrast(1) = -obj.minAbsContrast;
+            obj.negContrast(obj.numSteps) = -obj.maxAbsContrast;
+            for i = 2:obj.numSteps-1
+                % remember to add that to util
+                [equi_contrast, obj.posContrast(i), obj.negContrast(i)] = edu.washington.riekelab.yu.utils.getSplitContrast(sigmaC, ...
+                    apertureDiameterPix,pos_right, obj.minAbsContrast,obj.linearIntegrationFunction,...
+                    obj.pos_seq(i));
                 if equi_contrast > 0.05
                     display('attention: equivalent contrast not canceled')
                 end
@@ -82,11 +94,11 @@ classdef BalancedSkewSplitField
             end
             
             if obj.vertical
-                obj.delta_x = obj.delta_seq(contraInd);
+                obj.delta_x = obj.pos_seq(contraInd);
                 obj.delta_y = 0;
             else
                 obj.delta_x = 0;
-                obj.delta_y = obj.delta_seq(contraInd);
+                obj.delta_y = obj.pos_seq(contraInd);
             end
             
             %
