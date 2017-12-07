@@ -13,7 +13,7 @@ classdef BalancedSkewSplitField < edu.washington.riekelab.protocols.RiekeLabStag
         backgroundIntensity = 0.5 % (0-1)
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
-        minAbsContrast = 0.2 %(0 - 1)
+        minAbsContrast = 0.3 %(0 - 1)
         maxAbsContrast = 0.9 %(0 - 1)
         numSteps = 5 % must be odd number to get half field
         vertical = true
@@ -81,6 +81,8 @@ classdef BalancedSkewSplitField < edu.washington.riekelab.protocols.RiekeLabStag
                     display('attention: equivalent contrast not canceled')
                 end
             end
+            display(obj.posContrast);
+            display(obj.negContrast);
         end
         
         function prepareEpoch(obj, epoch)
@@ -119,6 +121,7 @@ classdef BalancedSkewSplitField < edu.washington.riekelab.protocols.RiekeLabStag
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
             splitFieldMatrix = zeros(apertureDiameterPix);
             d = max(obj.delta_x, obj.delta_y);
+            d = max(d, apertureDiameterPix-d);
             if abs(obj.contras(1)) < abs(obj.contras(2))
                 splitFieldMatrix(:,1:d) = obj.contras(1);
                 splitFieldMatrix(:,d+1:apertureDiameterPix) = obj.contras(2);
