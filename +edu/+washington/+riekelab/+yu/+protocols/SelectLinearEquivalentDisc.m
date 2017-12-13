@@ -1,5 +1,6 @@
 classdef SelectLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-%  
+%  limit the image stimulus on a subset that gets returned from the
+%  NormCosLinearEquivalentDisc
 properties
         preTime = 200 % ms
         stimTime = 200 % ms
