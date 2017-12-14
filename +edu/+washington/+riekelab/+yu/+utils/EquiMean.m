@@ -1,12 +1,18 @@
-function Intensity = EquiMean( SigmaC, image, Tag )
+function Intensity = EquiMean( SigmaC, image, Tag, bg )
 %EQUIMEAN equivalent intensity of a image
-%   Detailed explanation goes here
+%   Detailed explanation goes here - has default aperture
+%   image size should equal to aperture size
    if strcmp(Tag,'gaussian center')
       RF = fspecial('gaussian',size(image),SigmaC);
-      apertureMatrix = ones(size(image));
+      sz = size(image, 1);
+      r = floor(sz/2);
+      [rr, cc] = meshgrid(1:sz, 1:sz);
+      apertureMatrix = sqrt((rr-r).^2 +(cc-r).^2) < r;
       weightingFxn = apertureMatrix .* RF;
       weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
-      Intensity = sum(sum(weightingFxn .* double(image))); 
+      contrastImage = (image - bg)./bg;
+      equiContrast = sum(sum(weightingFxn .* double(contrastImage)));
+      Intensity = bg*Contrasat + equiContrast;
    elseif strcmp(Tag,'uniform')
       Intensity = mean(image(:));
    end

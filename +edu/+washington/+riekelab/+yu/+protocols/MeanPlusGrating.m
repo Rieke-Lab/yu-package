@@ -107,7 +107,7 @@ classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
             %gaussian or uniform
-            obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,grateMatrix,obj.linearIntegrationFunction);
+            obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,grateMatrix,obj.linearIntegrationFunction, obj.backgroundIntensity);
             grateMatrix_raw = uint8((grateMatrix - obj.equimean+obj.backgroundIntensity).*255);
          
             if strcmp(obj.stimulusTag,'image')

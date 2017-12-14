@@ -121,7 +121,7 @@ classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtoc
             
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
             %gaussian or uniform
-            obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,grateMatrix,obj.linearIntegrationFunction);
+            obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,grateMatrix,obj.linearIntegrationFunction, obj.backgroundIntensity);
          
             if strcmp(obj.stimulusTag,'grating')
                 scene = stage.builtin.stimuli.Image(grateMatrix_image);

@@ -124,7 +124,7 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
                 pos_bar_width, neg_bar_width, obj.pos_center);
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
             %gaussian or uniform
-            obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,skewedMatrix,obj.linearIntegrationFunction);
+            obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,skewedMatrix,obj.linearIntegrationFunction, obj.backgroundIntensity);
             skewedMatrix_image = uint8(skewedMatrix.*255);
             if strcmp(obj.stimulusTag,'intensity')
                 scene = stage.builtin.stimuli.Rectangle();
