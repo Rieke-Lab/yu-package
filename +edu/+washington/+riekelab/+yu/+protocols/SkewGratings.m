@@ -19,8 +19,8 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         backgroundIntensity = 0.5 % (0-1)
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
-        unitWidth = 10 %(um) the unit bar width
-        barWidth_unit = [2,1,4,3]; % even-odd bar width in units 
+        unitWidth = 20 %(um) the unit bar width
+        barWidth_unit = [2,1,2,2]; % even-odd bar width in units 
         onlineAnalysis = 'none'
         numberOfAverages = uint16(40) % number of epochs to queue
         linearIntegrationFunction = 'gaussian center' % small error due to pixel int

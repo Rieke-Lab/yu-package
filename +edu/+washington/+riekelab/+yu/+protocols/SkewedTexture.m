@@ -11,7 +11,7 @@ classdef SkewedTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
         imageName = '00152' %van hateren image names
         linearIntegrationFunction = 'gaussian center'
         textureSeed = 1
-        centerSigma = 60 % texture sigma
+        centerSigma = 30 % texture sigma
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
         onlineAnalysis = 'none'

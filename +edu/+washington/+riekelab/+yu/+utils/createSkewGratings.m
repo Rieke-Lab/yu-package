@@ -76,7 +76,7 @@ function gratingMatrix = createSkewGratings(offset,unitbarwidth,sz,pos_num, neg_
         
         if (sum(sum(gratingMatrix>0))>sum(sum(gratingMatrix<0)))
             gratingMatrix(gratingMatrix<0) = -0.9; % all negative pixels become -0.9 contrast
-            pos_contra = 0.9*sum(sum(weightedGratings(gratingMatrix<0)))/sum(sum(weightedGratings(gratingMatrix>0)));
+            pos_contra = -0.9*sum(sum(weightedGratings(gratingMatrix<0)))/sum(sum(weightedGratings(gratingMatrix>0)));
             gratingMatrix(gratingMatrix>0) = pos_contra;
         else
             gratingMatrix(gratingMatrix>0) = 0.9;
