@@ -1,4 +1,4 @@
-function gratingMatrix = createSkewGratings(offset,unitbarwidth,sz,pos_num, neg_num,pos_center)
+function gratingMatrix = createSkewGratings(offset,unitbarwidth,sz,pos_num, neg_num,pos_center, f1_cancel, SigmaC)
 % create bar graph with different distribution 
 % Detailed explanation goes here
 % offset the mean
@@ -54,16 +54,41 @@ function gratingMatrix = createSkewGratings(offset,unitbarwidth,sz,pos_num, neg_
     
     grating = ones(sz,1)*wave;
     gratingMatrix = grating;
-    if (sum(sum(gratingMatrix>0))>sum(sum(gratingMatrix<0)))
-        gratingMatrix(gratingMatrix<0) = -offset*0.9; % all negative pixels become -0.9 contrast
-        pos_contra = -sum(sum(gratingMatrix(gratingMatrix<0)))/sum(sum(gratingMatrix>0));
-        gratingMatrix(gratingMatrix>0) = pos_contra;
+    if f1_cancel
+        if (sum(sum(gratingMatrix>0))>sum(sum(gratingMatrix<0)))
+            gratingMatrix(gratingMatrix<0) = -0.9; % all negative pixels become -0.9 contrast
+            pos_contra = -sum(sum(gratingMatrix(gratingMatrix<0)))/sum(sum(gratingMatrix>0));
+            gratingMatrix(gratingMatrix>0) = pos_contra;
+        else
+            gratingMatrix(gratingMatrix>0) = 0.9;
+            neg_contra = -sum(sum(gratingMatrix(gratingMatrix>0)))/sum(sum(gratingMatrix<0));
+            gratingMatrix(gratingMatrix<0) = neg_contra;
+        end
     else
-        gratingMatrix(gratingMatrix>0) = offset*0.9;
-        neg_contra = -sum(sum(gratingMatrix(gratingMatrix>0)))/sum(sum(gratingMatrix<0));
-        gratingMatrix(gratingMatrix<0) = neg_contra;
+        % get the weighting matrix coming from receptive field
+        r = floor(sz/2);
+        [rr, cc] = meshgrid(1:sz, 1:sz);
+        apertureMatrix = sqrt((rr-r).^2 +(cc-r).^2) < r;
+        RF = fspecial('gaussian', [sz, sz], SigmaC);
+        weightingFxn = apertureMatrix.* RF;
+        weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
+        weightedGratings = gratingMatrix.*weightingFxn;
+        
+        if (sum(sum(gratingMatrix>0))>sum(sum(gratingMatrix<0)))
+            gratingMatrix(gratingMatrix<0) = -0.9; % all negative pixels become -0.9 contrast
+            pos_contra = 0.9*sum(sum(weightedGratings(gratingMatrix<0)))/sum(sum(weightedGratings(gratingMatrix>0)));
+            gratingMatrix(gratingMatrix>0) = pos_contra;
+        else
+            gratingMatrix(gratingMatrix>0) = 0.9;
+            neg_contra = 0.9*sum(sum(weightedGratings(gratingMatrix>0)))/sum(sum(weightedGratings(gratingMatrix<0)));
+            gratingMatrix(gratingMatrix<0) = neg_contra;
+        end
     end
-    gratingMatrix = gratingMatrix + offset;
+    equi_contrast = sum(sum(gratingMatrix.*weightingFxn));
+    if equi_contrast > 0.05
+        display('f1 is not canceled');
+    end
+    gratingMatrix = gratingMatrix.*offset + offset;
 
 end
 
