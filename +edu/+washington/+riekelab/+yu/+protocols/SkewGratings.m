@@ -121,9 +121,10 @@ classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             neg_bar_width = obj.currentNegBarWidth;
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
+            sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
             skewedMatrix = edu.washington.riekelab.yu.utils.createSkewGratings(obj.backgroundIntensity, currentunitWidthPix, apertureDiameterPix, ...
                 pos_bar_width, neg_bar_width, obj.pos_center, obj.cancelF1, sigmaC);
-            sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
+            
             %gaussian or uniform
             obj.equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,skewedMatrix,obj.linearIntegrationFunction, obj.backgroundIntensity);
             skewedMatrix_image = uint8(skewedMatrix.*255);

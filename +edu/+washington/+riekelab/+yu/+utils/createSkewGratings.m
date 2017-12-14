@@ -54,7 +54,7 @@ function gratingMatrix = createSkewGratings(offset,unitbarwidth,sz,pos_num, neg_
     
     grating = ones(sz,1)*wave;
     gratingMatrix = grating;
-    if f1_cancel
+    if ~f1_cancel
         if (sum(sum(gratingMatrix>0))>sum(sum(gratingMatrix<0)))
             gratingMatrix(gratingMatrix<0) = -0.9; % all negative pixels become -0.9 contrast
             pos_contra = -sum(sum(gratingMatrix(gratingMatrix<0)))/sum(sum(gratingMatrix>0));
@@ -83,10 +83,10 @@ function gratingMatrix = createSkewGratings(offset,unitbarwidth,sz,pos_num, neg_
             neg_contra = 0.9*sum(sum(weightedGratings(gratingMatrix>0)))/sum(sum(weightedGratings(gratingMatrix<0)));
             gratingMatrix(gratingMatrix<0) = neg_contra;
         end
-    end
-    equi_contrast = sum(sum(gratingMatrix.*weightingFxn));
-    if equi_contrast > 0.05
-        display('f1 is not canceled');
+        equi_contrast = sum(sum(gratingMatrix.*weightingFxn));
+        if equi_contrast > 0.05
+            display('f1 is not canceled');
+        end
     end
     gratingMatrix = gratingMatrix.*offset + offset;
 

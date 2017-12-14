@@ -12,7 +12,7 @@ function Intensity = EquiMean( SigmaC, image, Tag, bg )
       weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
       contrastImage = (image - bg)./bg;
       equiContrast = sum(sum(weightingFxn .* double(contrastImage)));
-      Intensity = bg*Contrasat + equiContrast;
+      Intensity = bg*equiContrast + bg;
    elseif strcmp(Tag,'uniform')
       Intensity = mean(image(:));
    end

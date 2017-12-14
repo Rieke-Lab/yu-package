@@ -74,8 +74,9 @@ classdef SkewedTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             img = (img./max(img(:))); %rescale s.t. brightest point is maximum monitor level
             obj.backgroundIntensity = mean(img(:));%set the mean to the mean over the image
             contrastImage = (img - obj.backgroundIntensity) ./ obj.backgroundIntensity;
-            img = img.*255; %rescale s.t. brightest point is maximum monitor level
-            obj.wholeImageMatrix = uint8(img);
+            obj.wholeImageMatrix = img;
+            %img = img.*255; %rescale s.t. brightest point is maximum monitor level
+            %obj.wholeImageMatrix = uint8(img);
             
             %size of the stimulus on the prep:
             stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
@@ -103,9 +104,9 @@ classdef SkewedTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             %pluck one patch from each bin
             pullInds = arrayfun(@(b) find(b == bin,1),populatedBins);
             %get patch indices:
-            pullInds = randsample(pullInds,obj.noPatches);
-            obj.patchLocations(1,1:obj.noPatches) = xLoc(pullInds); %in VH pixels
-            obj.patchLocations(2,1:obj.noPatches) = yLoc(pullInds);
+            pullInds = randsample(pullInds,obj_noPatches);
+            obj.patchLocations(1,1:obj_noPatches) = xLoc(pullInds); %in VH pixels
+            obj.patchLocations(2,1:obj_noPatches) = yLoc(pullInds);
             % TODO : caclulate equivalent intensity
             sigmaC = obj.rfSigmaCenter ./ 3.3; %microns -> VH pixels
             RF = fspecial('gaussian',2.*[radX radY] + 1,sigmaC);
@@ -137,7 +138,8 @@ classdef SkewedTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
             % TODO
             % retrive the base image index
-            obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/4,obj.noPatches) + 1);
+            obj_noPatches = 30;
+            obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/4,obj_noPatches) + 1);
             obj.currentPatchLocation(1) = obj.patchLocations(1,obj.imagePatchIndex); %in VH pixels
             obj.currentPatchLocation(2) = obj.patchLocations(2,obj.imagePatchIndex);
             obj.equivalentIntensity = obj.allEquivalentIntensityValues(obj.imagePatchIndex);
@@ -186,10 +188,10 @@ classdef SkewedTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             p.setBackgroundColor(obj.backgroundIntensity);
             apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             if strcmp(obj.stimulusTag, 'disc')
-                scene = stage.biltin.stimuli.Rectangle();
-                scene.color = obj.equivalentIntensitty;
+                scene = stage.builtin.stimuli.Rectangle();
+                scene.color = obj.equivalentIntensity;
             else
-                scene = stage.builtin.stimuli.Image(obj.imagePatchMatrix);
+                scene = stage.builtin.stimuli.Image(uint8(obj.imagePatchMatrix*255));
                 scene.setMinFunction(GL.LINEAR);
                 scene.setMagFunction(GL.LINEAR);
             end
@@ -202,7 +204,7 @@ classdef SkewedTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
             
            if (obj.apertureDiameter > 0) %% Create aperture
                 aperture = stage.builtin.stimuli.Rectangle();
-                aperture.position = canvasSize/2 + centerOffsetPix;
+                aperture.position = canvasSize/2;
                 aperture.color = obj.backgroundIntensity;
                 aperture.size = [max(canvasSize) max(canvasSize)];
                 mask = stage.core.Mask.createCircularAperture(apertureDiameterPix/max(canvasSize), 1024); %circular aperture

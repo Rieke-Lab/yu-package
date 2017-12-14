@@ -7,7 +7,7 @@ function mat = getImageTexture(img, sigma, randSeed, tag)
     sigma = round(sigma/2/3.3);
     % set random seed
     stream = RandStream('mt19937ar','Seed',randSeed);
-    mat = double(rand(stream, textureSize));
+    mat = double(rand(stream, size(img)));
     % make gaussian filter
     h = fspecial('gaussian',6*sigma,sigma);
     h = h ./ sum(h(:)); % normalize
