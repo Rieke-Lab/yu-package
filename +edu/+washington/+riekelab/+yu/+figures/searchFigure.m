@@ -75,7 +75,7 @@ classdef searchFigure < symphonyui.core.FigureHandler
                 newEpochResponse = chargeMult*mean(epochResponseTrace); %pA*datapoint
             end
             
-            pcolor = 1
+            pcolor = 1;
             
             if (size(obj.plotTable,1)== 0)
                 recordPlot = {currentSeed, currentSigma, 1};
@@ -97,7 +97,7 @@ classdef searchFigure < symphonyui.core.FigureHandler
                 obj.dataTable.Sigma == currentSitma && obj.angle == currentAngle);
             if (size(lastData,1)==0)
                 % new record
-                recordData = {currentSeed,currentSigma, currentAngle, newEpochResponse,0,1,pcolor}
+                recordData = {currentSeed,currentSigma, currentAngle, newEpochResponse,0,1,pcolor};
                 obj.dataTable = [obj.dataTable;recordData];
             else
                 meanResp = (lastData.mean*lastData.trials+newEpochResponse)/(lastData.trials+1);
@@ -106,8 +106,9 @@ classdef searchFigure < symphonyui.core.FigureHandler
                 trial = lastData.trials+1;
                 
             end
-            recordData = {currentSeed,currentSigma,currentAngle,newEpochResponse,
-                'seed' 'Sigma' 'angle' 'mean' 'var' 'trials' 'Color'
+            recordData = {currentSeed,currentSigma,currentAngle,newEpochResponse,...
+                'seed' 'Sigma' 'angle' 'mean' 'var' 'trials' 'Color'};
         end
+    end
 end
 
