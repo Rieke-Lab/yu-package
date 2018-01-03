@@ -7,9 +7,7 @@ classdef SplitFieldMoving < edu.washington.riekelab.protocols.RiekeLabStageProto
         contrast_1 = -0.9 % relative to mean (0-1)
         contrast_2 = 0.2 % relative to mean(0-1)
         temporalFrequency = 4 % Hz
-        spotDiameter = 300; % um
-        maskDiameter = 0 % um
-        %splitField = false 
+        apertureDiameter = 200 % um
         vertical = false;  % deg
         backgroundIntensity = 0.5 % (0-1)
         centerBias = 20 % x or y bias from center(um)
@@ -117,25 +115,24 @@ classdef SplitFieldMoving < edu.washington.riekelab.protocols.RiekeLabStageProto
             canvasSize = obj.rig.getDevice('Stage').getCanvasSize();
             
             %convert from microns to pixels...
-            spotDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.spotDiameter);
             centerBiasPix = obj.rig.getDevice('Stage').um2pix(obj.centerBias);
-            maskDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.maskDiameter);
+            apertureDiameterPix = obj.rig.getDevice('Stage').um2pix(obj.apertureDiameter);
             
             p = stage.core.Presentation((obj.preTime + obj.stimTime + obj.tailTime) * 1e-3); %create presentation of specified duration
             p.setBackgroundColor(obj.backgroundIntensity); % Set background intensity
             
             % Create split-field stimulus
-            splitFiledContrastMatrix = zeros(spotDiameterPix)+obj.backgroundIntensity;
+            splitFiledContrastMatrix = zeros(apertureDiameterPix)+obj.backgroundIntensity;
             scene = stage.builtin.stimuli.Image(uint8(splitFiledContrastMatrix.*255));
-            scene.size = canvasSize; %scale up to canvas size
+            scene.size = [apertureDiameterPix apertureDiameterPix];  %scale up to canvas size
             scene.position = canvasSize/2;
             scene.setMinFunction(GL.LINEAR);
             scene.setMagFunction(GL.LINEAR);
             p.addStimulus(scene);
             if (obj.temporalFrequency>0)
                 sceneMatrix = stage.builtin.controllers.PropertyController(scene,'imageMatrix',...
-                    @(state)getSceneMatrix(state.time - obj.preTime/1e3,obj.background,obj.vertical,...
-                    obj.temporalFrequency,obj.contrast_1, obj.contrast_2, centerBiasPix, spotDiameterPix));
+                    @(state)getSceneMatrix(state.time - obj.preTime/1e3,obj.backgroundIntensity,obj.vertical,...
+                    obj.temporalFrequency,obj.contrast_1, obj.contrast_2, centerBiasPix, apertureDiameterPix));
                 p.addController(sceneMatrix);
             end
             sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
@@ -146,33 +143,24 @@ classdef SplitFieldMoving < edu.washington.riekelab.protocols.RiekeLabStageProto
                 img = zeros(sz);
                 if time>0
                     gain = cos(time*freq*pi*2);
-                    img = contrast2*gain;
+                    img = img+contrast2*gain;
                     img(:, 1:floor(sz/2)+bias) = contrast1*gain;
-                else p = img;
                 end
-                p = p*background + background;
+                p = img*background + background;
                 p = uint8(p.*255);
                 if (~vertical)
                     p = p';
-                end
-                    
+                end 
             end
             % Create aperture
-            aperture = stage.builtin.stimuli.Rectangle();
-            aperture.position = canvasSize/2;
-            aperture.color = obj.backgroundIntensity;
-            aperture.size = [spotDiameterPix, spotDiameterPix];
-            mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
-            aperture.setMask(mask);
-            p.addStimulus(aperture); %add aperture
-            
-            if (obj.maskDiameter > 0) % Create mask
-                mask = stage.builtin.stimuli.Ellipse();
-                mask.position = canvasSize/2 + centerOffsetPix;
-                mask.color = obj.backgroundIntensity;
-                mask.radiusX = maskDiameterPix/2;
-                mask.radiusY = maskDiameterPix/2;
-                p.addStimulus(mask); %add mask
+            if  (obj.apertureDiameter > 0) % Create aperture
+                aperture = stage.builtin.stimuli.Rectangle();
+                aperture.position = canvasSize/2;
+                aperture.color = obj.backgroundIntensity;
+                aperture.size = [apertureDiameterPix, apertureDiameterPix];
+                mask = stage.core.Mask.createCircularAperture(1, 1024); %circular aperture
+                aperture.setMask(mask);
+                p.addStimulus(aperture); %add aperture
             end
 
         end
