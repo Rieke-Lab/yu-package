@@ -10,7 +10,7 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
         tailTime = 200 % ms
         imageName = '00152' %van hateren image names
         linearIntegrationFunction = 'gaussian center'
-        barWidthSeq = [80, 120];
+        barWidthSeq = [60, 100];
         barContrast = 0.9 %(0-1)
         apertureDiameter = 200 % um
         rfSigmaCenter = 50 % (um) Enter from fit RF
@@ -78,7 +78,7 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
             obj.wholeImageMatrix = img;
             %img = img.*255; %rescale s.t. brightest point is maximum monitor level
             %obj.wholeImageMatrix = uint8(img);
-            
+            rng(1); % set the seed to be 1
             %size of the stimulus on the prep:
             stimSize = obj.rig.getDevice('Stage').getCanvasSize() .* ...
                 obj.rig.getDevice('Stage').getConfigurationSetting('micronsPerPixel'); %um
@@ -98,7 +98,7 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
             LnResp = imageData.(fieldName).LnModelResponse(inds);
             responseDifferences = subunitResp - LnResp;
             % only take 30 patches
-            obj_noPatches = 15;
+            obj_noPatches = 30;
             %pull more than needed to account for empty bins at tail
             [~, ~, bin] = histcounts(responseDifferences,1.5*obj_noPatches);
             populatedBins = unique(bin);
@@ -125,8 +125,8 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
                 weightingFxn = apertureMatrix;
             end
             weightingFxn = weightingFxn ./ sum(weightingFxn(:)); %sum to one
-            
-            for ff = 1:obj_noPatches
+            no_selectedPatches = 15;
+            for ff = 1:no_selectedPatches
                 tempPatch = contrastImage(round(obj.patchLocations(1,ff)-radX):round(obj.patchLocations(1,ff)+radX),...
                     round(obj.patchLocations(2,ff)-radY):round(obj.patchLocations(2,ff)+radY));
                 equivalentContrast = sum(sum(weightingFxn .* tempPatch));
@@ -139,7 +139,7 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
             prepareEpoch@edu.washington.riekelab.protocols.RiekeLabStageProtocol(obj, epoch);
             % TODO
             % retrive the base image index
-            obj_noPatches = 15;
+            obj_noPatches = 14;
             obj_noPerCycle = length(obj.barWidthSeq)+2;
             obj.imagePatchIndex = floor(mod(obj.numEpochsCompleted/obj_noPerCycle,obj_noPatches) + 1);
             obj.currentPatchLocation(1) = obj.patchLocations(1,obj.imagePatchIndex); %in VH pixels
@@ -155,9 +155,9 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
             imageMatrix = obj.wholeImageMatrix(round(obj.currentPatchLocation(1)-radX):round(obj.currentPatchLocation(1)+radX),...
                 round(obj.currentPatchLocation(2)-radY):round(obj.currentPatchLocation(2)+radY));
             imageMatrix = imageMatrix';
-            eventInd = mod(obj.numEpochsCompleted,4);
+            eventInd = mod(obj.numEpochsCompleted,obj_noPerCycle);
             % according to stimulusTag, generate the image to display
-            barWidth = -1
+            obj.currentBarWidth = -1;
             if eventInd == 0
                 obj.stimulusTag = 'image';
                 obj.imagePatchMatrix = imageMatrix;
@@ -166,7 +166,7 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
                 obj.imagePatchMatrix = [];
             else
                 obj.stimulusTag = 'grating';
-                barWidth = obj.barWidthSeq(eventInd-2);
+                obj.currentBarWidth = obj.barWidthSeq(eventInd-1);
             end
             
             device = obj.rig.getDevice(obj.amp);
@@ -180,7 +180,7 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
             epoch.addParameter('currentPatchLocation', obj.currentPatchLocation);
             epoch.addParameter('equivalentIntensity', obj.equivalentIntensity);
             epoch.addParameter('stimulusTag', obj.stimulusTag);
-            epoch.addParameter('currentBarWidth', barWidth);
+            epoch.addParameter('currentBarWidth', obj.currentBarWidth);
          end
         
          function p = createPresentation(obj)
@@ -191,18 +191,27 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
             if strcmp(obj.stimulusTag, 'disc')
                 scene = stage.builtin.stimuli.Rectangle();
                 scene.color = obj.equivalentIntensity;
+                scene.size = canvasSize;
             elseif strcmp(obj.stimulusTag, 'image')
                 scene = stage.builtin.stimuli.Image(uint8(obj.imagePatchMatrix*255));
                 scene.setMinFunction(GL.LINEAR);
                 scene.setMagFunction(GL.LINEAR);
+                scene.size = canvasSize;
             elseif strcmp(obj.stimulusTag, 'grating')
                 absContrast = obj.backgroundIntensity*obj.barContrast;
                 currentBarWidthPix = obj.rig.getDevice('Stage').um2pix(obj.currentBarWidth);
                 grateMatrix = edu.washington.riekelab.yu.utils.createGratings(obj.equivalentIntensity,absContrast,currentBarWidthPix,apertureDiameterPix);
+                sigmaC = obj.rfSigmaCenter ./ 3.3;
+                equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,grateMatrix,'gaussian center', obj.backgroundIntensity);
+                if abs(equimean - obj.equivalentIntensity)>0.05
+                    display('F1 is not canceled! Warning!');
+                end
                 grateMatrix_image = uint8(grateMatrix.*255);
                 scene = stage.builtin.stimuli.Image(grateMatrix_image);
+                scene.setMinFunction(GL.LINEAR);
+                scene.setMagFunction(GL.LINEAR);
+                scene.size = [apertureDiameterPix apertureDiameterPix];
             end
-            scene.size = canvasSize;
             scene.position = canvasSize/2;
             p.addStimulus(scene);
             sceneVisible = stage.builtin.controllers.PropertyController(scene, 'visible', ...
