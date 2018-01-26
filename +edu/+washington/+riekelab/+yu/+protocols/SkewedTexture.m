@@ -2,8 +2,15 @@ classdef SkewedTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     %SKEWEDTEXTURE 
     % Show textures that wrapped in the same pixel value distribution as
     % natural images
+    % tags displayed in sequence as: natural image, equivalent disc,
+    % s_texture(textures that have the same distribution as natural
+    % images), texture(original texture).
     % Detailed explanation
-    % First step: use stored image patches from 00152 and 01151
+    % Parameters to set:
+    % 1. textureSeed
+    % 2. centerSigma
+    % limited for ussing stored image patches from 00152 and 01151
+    %
     properties
         preTime = 200 % ms
         stimTime = 200 % ms

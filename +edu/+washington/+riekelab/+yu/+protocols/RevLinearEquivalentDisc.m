@@ -1,5 +1,10 @@
 classdef RevLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    
+    %REVLINEAREQUIVALENT DISC:
+    % Display a natural image(determined by imageName, patchLoc) or its equivalent disc with
+    % different temporal patterns including (specified in waveform) sine,
+    % square, phase).
+    % phase: sine wave with a initial phase specified at phase.
+    % The protocol will alternating between the images and equivalent discs
     properties
         preTime = 250 % ms
         stimTime = 2000 % ms

@@ -1,9 +1,16 @@
 classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    %SKEWEDTEXTURE 
-    % Show textures that wrapped in the same pixel value distribution as
-    % natural images
-    % Detailed explanation
-    % First step: use stored image patches from 00152 and 01151
+    % NATIMGGRATINGCOMBO 
+    % Display natural image patches(only pre select 20, the same as ranked,
+    % positive) togeher with equivalent disc and gratings that have the
+    % same F1 component (mean)).
+    % Sequence of tags?disc, image, grating1, grating2, ....
+    % The bar width of gratings can be set by barWidthSeq, and contrast
+    % responses can be set as barContrast. 
+    % The F1 component (equivalent mean) should be constant across
+    % different stimulus tags (if equivalent mean of gratings differ by
+    % 0.05, there will be a warning message). 
+    % Also, if the grating pixel exceeds the lower bound (< 0), there will
+    % also be a warning message). 
     properties
         preTime = 200 % ms
         stimTime = 200 % ms
@@ -205,6 +212,9 @@ classdef NatImgGratingCombo < edu.washington.riekelab.protocols.RiekeLabStagePro
                 equimean = edu.washington.riekelab.yu.utils.EquiMean(sigmaC,grateMatrix,'gaussian center', obj.backgroundIntensity);
                 if abs(equimean - obj.equivalentIntensity)>0.05
                     display('F1 is not canceled! Warning!');
+                end
+                if min(min(grateMatrix)) < 0
+                    display('Warning: negative pixel value for gratings')
                 end
                 grateMatrix_image = uint8(grateMatrix.*255);
                 scene = stage.builtin.stimuli.Image(grateMatrix_image);

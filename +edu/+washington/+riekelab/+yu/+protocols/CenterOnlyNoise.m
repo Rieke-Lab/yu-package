@@ -1,4 +1,6 @@
 classdef CenterOnlyNoise < edu.washington.riekelab.protocols.RiekeLabStageProtocol
+    %CENTERONLYNOISE
+    % Add an aperture on top of gaussian noise display
     
     properties
         preTime = 500 % ms

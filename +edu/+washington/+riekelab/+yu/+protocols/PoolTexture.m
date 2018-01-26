@@ -1,6 +1,16 @@
 classdef PoolTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    %POOLTEXTURE Summary of this class goes here
-    %   Detailed explanation goes here
+    %POOLTEXTURE 
+    %   go over series of texture stimulus(numSigma*numSeed) to find the
+    %   best texture stimulus. 
+    % parameters to alternate: 
+    % 1. numSigma: number of differen center sigmas
+    % 2. numSeed: different number of seeds to generate textures
+    % 3. seedSampling: random, ordered - > random: random set of seeds;
+    % ordered: allow the same set of seeds
+    % 4. edgeSharpen: 'Off': just original texture
+    % 'binary': texture became 0, 1 binary
+    % 'on':image edge sharpened with imgsharpen method
+    % 5. contrast: contrast of texture
     
     properties
         preTime = 200 %ms

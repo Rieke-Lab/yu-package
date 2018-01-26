@@ -1,5 +1,6 @@
 classdef NatImageDynamicClampwithTimeShift < edu.washington.riekelab.protocols.RiekeLabProtocol
-    
+    % UNFINISHED
+    % try to add a time shift between inhibitory and excitatory condutance
     properties
         gExcMultiplier = 1
         gInhMultiplier = 1

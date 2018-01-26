@@ -1,10 +1,14 @@
 classdef BalancedSkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     %BALANCEDSKEWSPLITFIELD Summary of this class goes here
-    %   With similar goal as the SplitField. 
-    % The difference here is c1_Hat*A1 remains constant
-    
- %SKEWSPLITFIELD: modify the pixel distribution of splitfield stimulu
-    % c1_hat*A1 = c2_hat*A2 (c_hat: rec field adjusted contrast, A1:area)
+    %   With similar goal as the skewed_SplitField, to generate skewed
+    %   contrast distribution but canceled F1 splitfield images
+    % The difference here is c1_Hat*A1 remains constant across different
+    % contrast levels. 
+ 
+    % c1_hat*A1 = c2_hat*A2 (c_hat: receptive field adjusted contrast)
+    % A1:area size, and the different (A1, A2) (C1, C2) (numSteps) are set based on
+    % the initial (minAbsContrast, maxAbsContrast). (Skewed split field
+    % protocol needs those parameters to be set manully). 
     
     properties
         preTime = 200 % ms

@@ -1,10 +1,10 @@
 classdef MeanPlusGrating < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    % MeanPlusGrating: raise a mean value to grating stimuli
+    % MeanPlusGrating: raise a mean value on top of grating stimuli
     % modified from Max's ContrastReversingGrating.m and
     % MeanPlusContrastimage.m
     
     % V1: manually set a mean value; bar width is determined by a array
-    % input
+    % contrast: maximum value allowed by the background intensity and mean intensity 
     % Try to match stimulation parameter to those in
     % MeanPlusContrastImage.m for future comparison purpose
     

@@ -1,6 +1,9 @@
 classdef RotateTexture < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    %ROTATE texture in the receptive field center
-    %to fix -> scene size 
+    % ROTATE texture in the receptive field center
+    % DisplayMode: 'flash': flash the same texture image at different angles
+    % 'continuous': rotate the image continuously like a movie
+    % Parameters to set: centerSigma
+    % angularInterval (it can be speed if select continuous)
     
     properties
         preTime = 200 % ms

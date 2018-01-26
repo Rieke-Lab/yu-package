@@ -1,6 +1,15 @@
 classdef GratingwithMean < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    % GratingwithMean: Compare responses to grating(with mean) and
-    % equivalent discs
+    % GratingwithMean
+    % Grating stimulus on top of a F1 component (meanIntensity),
+    % alternating between Grating stimulus and equivalent disc (Tag:
+    % grating, intensity).
+    %
+    % Parameters of stimulus that the protocol will iterate through:
+    % different meanIntesntiy * different bar width (minbarWidth,
+    % numBarWidth)*different contrast levels(contrastLevels)
+    % the different contrast (n = contrast Levels) is determined by the minAbsContrast,
+    % maxAbsContrast(max contrast allowed by the background intensity and
+    % meanIntensity)
     % modified from MeanPlusGrating.m
     % ZY, 2016
     

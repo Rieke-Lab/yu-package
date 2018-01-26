@@ -1,5 +1,19 @@
 classdef NormCosLinearEquivalentDisc < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    
+    % NORMCOSLINEAREQUIVALENTDISC
+    % Automatically search through image patches(binary search) and find
+    % and save (as temp_locs.mat)
+    % (n = noPatches) image patches that evoke the most
+    % different responses between equivalent disc and natural images. 
+    % Parameters to set:
+    % 1. searchMode: when set 'On' it will search untill the noPatches
+    % found, when 'Off' it will just go through all images.
+    % 2. displayMode: 'full', use the original natural image patches;
+    % 'trunc', image pixel values are truncted so that the min and max
+    % pixel contrast are within (0 - 1) -> for the reverse contrast
+    % stimulus. 
+    %
+    % The saved image patches can be used by SelectLinearEquivalentDisc.m
+    % for repeating for more trials.
     properties
         preTime = 200 % ms
         stimTime = 200 % ms

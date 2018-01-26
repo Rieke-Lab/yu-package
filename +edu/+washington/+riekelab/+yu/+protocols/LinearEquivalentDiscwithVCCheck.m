@@ -1,6 +1,7 @@
 classdef LinearEquivalentDiscwithVCCheck < edu.washington.riekelab.protocols.RiekeLabStageProtocol
+% UNFINISHED
 % as before merging into NIF super class from turner Package
-% check contrast responses periodically
+% check contrast responses periodically 
     properties
         preTime = 200 % ms
         stimTime = 200 % ms

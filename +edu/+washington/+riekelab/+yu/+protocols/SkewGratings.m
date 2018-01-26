@@ -1,16 +1,22 @@
 classdef SkewGratings < edu.washington.riekelab.protocols.RiekeLabStageProtocol
-    % SkewGratings: modify the skewness of images, evenBars -> equivalent
-    % disc -> skewed_bars1 -> disc
+    % SkewGratings: modify the skewness of the pixel distribution of gratings, 
+    % Ideally it is best to setup as : evenBars -> equivalent disc -> skewed_bars1 -> disc
     % Detailed explaination:
+    % the grating bar size is set as numbers of basic unitWidth
+    % e.g. if the barWidth_unit = [2, 1, 2, 2]
+    % then for one cycle of gratings it will be (pos_bars, neg_bars):
+    %(2, 1) (1, 2), (2, 2), (2, 2).
+    % Parameters to set:
+    % equivalentDisc: if on, equivalent disc is displayed after each
+    % grating
+    % cancelF1: if on, the positive contrast/negative contrast is set so
+    % that the total F1 is 0 (equivalent intensity is 0), othewise, it
+    % will be set naively based on the area of positive contrast/negative contrast.
+    % Either case, one of the contrast should be
+    % 0.9/-0.9. 
     % constrains:
-    %(1) count(pos_contrast)*pos_contrast+count(neg_contrast)*neg_contrast = 0
+    %(1) count(pos_contrast)*pos_contrast area+count(neg_contrast)*neg_contrast area = 0
     %(2) symmertry
-    %(3) base bar size not too small
-    % for simplicity user supply ratio of barwidth
-    % either fix the neg_contrast:-0.9, shift the positive contrast from
-    % 0.1 - 0.9
-    % or fix the pos_contrast:0.9, shift the negative contrast from [-0.1 -
-    % 0.9]
     
     properties
         preTime = 200 % ms

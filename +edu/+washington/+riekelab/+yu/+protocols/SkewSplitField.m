@@ -1,7 +1,8 @@
 classdef SkewSplitField < edu.washington.riekelab.protocols.RiekeLabStageProtocol
     %SKEWSPLITFIELD: modify the pixel distribution of splitfield stimulu
     % c1_hat*A1 = c2_hat*A2 (c_hat: rec field adjusted contrast, A1:area)
-    
+    % Contrast pairs (shown as negContrast, posContrast) need to be set
+    % manually. 
     properties
         preTime = 200 % ms
         stimTime = 200 % ms

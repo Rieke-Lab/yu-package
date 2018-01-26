@@ -1,7 +1,8 @@
 function Intensity = EquiMean( SigmaC, image, Tag, bg )
 %EQUIMEAN equivalent intensity of a image
-%   Detailed explanation goes here - has default aperture
-%   image size should equal to aperture size
+%   Detailed explanation goes here 
+% calculate the equivalent intensity of image that has a aperture added
+%   restrain: aperture diameter is set as the image size
    if strcmp(Tag,'gaussian center')
       RF = fspecial('gaussian',size(image),SigmaC);
       sz = size(image, 1);
